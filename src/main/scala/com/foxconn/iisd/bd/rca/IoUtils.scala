@@ -1,12 +1,18 @@
 package com.foxconn.iisd.bd.rca
 
-import java.io.FileNotFoundException
+import java.io._
 import java.net.URI
+
+import com.foxconn.iisd.bd.rca.XWJKernelEnginePlugin.configLoader
+import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream}
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 object IoUtils {
+    val BUFFERSIZE = 4096
+    val TAIJIBASE_MAPPING = configLoader.getString("taiji_base", "code").split(",")
 
     def flatMinioFiles(spark: SparkSession, flag:String, srcPathStr: String, fileLimits: Integer): Path = {
         var count = 0;
@@ -117,5 +123,63 @@ object IoUtils {
 
     }
 
+    //parse xz file
+    def unxzfile( in: InputStream, destinationDir: String ) {
+        try{
+            def processTar( tarIn: TarArchiveInputStream ): Unit = {
+                def processFileInTar( dest: BufferedOutputStream ): Unit = {
+                    val data = new Array[ Byte ]( BUFFERSIZE)
+                    val count = tarIn.read( data, 0, BUFFERSIZE )
+                    count match {
+                        case -1 =>
+                            dest.close( )
+                        case _ =>
+                            dest.write( data, 0, count )
+                            processFileInTar( dest )
+                    }
+                }
+                tarIn.getNextEntry.asInstanceOf[ TarArchiveEntry ]
+                match {
+                    case null =>
+                    case a: TarArchiveEntry if a.isDirectory =>
+                        val f: File = new File( a.getName )
+                        f.mkdirs( )
+                        processTar( tarIn )
+                    case a: TarArchiveEntry if a.isFile =>
+
+                        if(a.getName.contains("WuDang") && !a.getName().contains("Repair")){
+                            import scala.util.control._
+                            val loop = new Breaks
+                            loop.breakable {
+                                for (code <- TAIJIBASE_MAPPING) {
+                                    if (a.getName().contains(code)) {
+                                        val fos: FileOutputStream = new FileOutputStream(destinationDir + a.getName.split("/").last)
+                                        val dest: BufferedOutputStream = new BufferedOutputStream(fos,
+                                            BUFFERSIZE)
+                                        processFileInTar(dest)
+                                        println("Extracting: "+a.getName)
+                                        loop.break
+                                    }
+                                }
+                            }
+                        }
+                        processTar( tarIn )
+                    case a: TarArchiveEntry => processTar( tarIn )
+                }
+            }
+
+            val xzIn: XZCompressorInputStream = new XZCompressorInputStream( in )
+            val tarIn: TarArchiveInputStream = new TarArchiveInputStream( xzIn )
+            processTar( tarIn )
+            tarIn.close( )
+            println( "unxz completed successfully." )
+        }
+        catch {
+            case ex: FileNotFoundException => {
+                // ex.printStackTrace()
+                println("===> FileNotFoundException !!!")
+            }
+        }
+    }
 
 }

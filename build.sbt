@@ -5,7 +5,7 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
-mainClass in assembly := Some("com.foxconn.iisd.bd.rca.KernelEnginePlugin")
+mainClass in assembly := Some("com.foxconn.iisd.bd.rca.XWJKernelEnginePlugin")
 
 assemblyJarName in assembly := { s"${name.value}.jar" }
 
@@ -48,8 +48,10 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk" % awsVersion,
   "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion,
   "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-  "org.apache.hadoop" % "hadoop-aws" % hadoopVersion
-  
+  "org.apache.hadoop" % "hadoop-aws" % hadoopVersion,
+  //unarchive xz file
+  "com.databricks" %% "spark-xml" % "0.5.0",
+  "org.apache.commons" % "commons-compress" % "1.18"
 )
 
 assemblyMergeStrategy in assembly := {
@@ -73,6 +75,9 @@ assemblyMergeStrategy in assembly := {
     }
   case PathList(ps @ _*)
     if ps contains "foxconn" => MergeStrategy.first
+  case PathList(ps @ _*)
+    if ps contains "databricks" => MergeStrategy.first
+  case PathList("org", "apache", "commons", "compress", ps @ _*) => MergeStrategy.first
   case x =>
     MergeStrategy.discard
 }
