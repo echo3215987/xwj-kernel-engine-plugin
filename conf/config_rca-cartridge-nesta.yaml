@@ -1,0 +1,137 @@
+spark:
+    job_name: "cartridgeNestaKernelEngine"
+    master: "k8s://192.168.1.63:6443"
+    conf: "spark.driver.memory=6g;
+           spark.executor.memory=6g;
+           spark.executor.instances=1;
+           spark.memory.offHeap.enabled=true;
+           spark.memory.offHeap.size=4g;
+           spark.eventLog.dir=/mnt/fuse_cephfs/data/spark/eventLog;
+           spark.eventLog.enabled=true"
+
+minio:
+    endpoint:   "http://10.57.232.167:31359"
+    accessKey:  "AKIAIOSFODNN7EXAMPLE"
+    secretKey:  "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    bucket:     "rca-ftp"
+
+cockroachdb:
+    adapter:    "postgresql"
+    host:       "10.57.232.61"
+    port:       "26257"
+    sslmode:    "require"
+    database:   "rca-dev"
+    username:   "bigdata"
+    password:   "bigdata"
+    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
+
+mariadb:
+    adapter:    "mysql"
+    host:       "10.57.232.61"
+    port:       "3308"
+    database:   "rca-dev"
+    username:   "edgeserver"
+    password:   "Foxconn123654!@"
+    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&useUnicode=true&characterEncoding=UTF-8"
+#    adapter:    "mysql"
+#    host:       "10.57.232.61"
+#    port:       "30849"
+#    database:   "rca-ipbd-lx-printer"
+#    username:   "root"
+#    password:   "bigdata"
+#    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
+
+general:
+    factory: "CQ"
+    from_minio: "true"
+    max_records_within_a_file: "5000"
+
+part_vendor_rules:
+    Label: "PARTSN,0,0"
+    Body: "PARTSN,0,0"
+    Bag: "PARTSN,0,0"
+    Disc Valve: "PARTSN,0,0"
+    Acc: "PARTSN,0,0"
+    Lid: "PARTSN,0,0"
+    Septum: "PARTSN,0,0"
+    Ink: "PARTSN,0,0"
+    Acumen Chip : "PARTSN,0,0"
+    Film : "PARTSN,0,0"
+
+part_datecode_rules:
+    Label: "PARTSN,0,0"
+    Body: "PARTSN,0,0"
+    Bag: "PARTSN,0,0"
+    Disc Valve: "PARTSN,0,0"
+    Acc: "PARTSN,0,0"
+    Lid: "PARTSN,0,0"
+    Septum: "PARTSN,0,0"
+    Ink: "PARTSN,0,0"
+    Acumen Chip : "PARTSN,0,0"
+    Film : "PARTSN,0,0"
+
+#part_vendor_rules:
+#    CD: "Kronos AIO Carriage PCA,PARTSN,PARTSN,0,2"
+#    CAL: "Tudou(Taiji CR),PARTSN,0,3"
+#    LK: "TURTLE WW INTERNAL PS,PARTSN,8,10"
+#    C44: "Taiji ASSY MPCA IA,PARTSN,0,3"
+#    4BH6: "CIS Module (Tempo-GT-CR),PARTSN,0,4"
+#
+#part_datecode_rules:
+#    CD: "Kronos AIO Carriage PCA,PARTSN,2,6"
+#    CAL: "Tudou(Taiji CR),PARTSN,3,6"
+#    LK: "TURTLE WW INTERNAL PS,PARTSN,1,5"
+#    C44: "Taiji ASSY MPCA IA,PARTSN,3,6"
+#    4BH6: "CIS Module (Tempo-GT-CR),PARTSN,9,14"
+
+local_log_path:
+    data_base_path: "/Users/hanlinux/data/rca/IPPD-L10"
+    wip_path: "{{data_base_path}}/IPPD-L10_SFC_20190313.txt"
+    wip_parts_path: "{{data_base_path}}/IPPD-L10_PARTS_20190313.txt"
+    bobcat_path: "{{data_base_path}}/IPPD-L10_TEST_20190313.txt"
+    wip_file_limits: "30"
+    wip_parts_file_limits: "30"
+    bobcat_file_limits: "0"
+
+minio_log_path:
+    data_base_path: "s3a://rca-ftp/Cartridge-Nesta/Data"
+    wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
+    wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"
+    bobcat_path: "{{data_base_path}}/Bobcat_D/"
+    bobcat_d_tmp_path: "{{data_base_path}}/Bobcat_D_TMP/"
+    bobcat_output_path: "{{data_base_path}}/Bobcat/"
+    wip_file_limits: "1"
+    wip_parts_file_limits: "1"
+    bobcat_file_limits: "1"
+
+summary_log_path:
+    data_base_path: "s3a://rca-dev/Cartridge-Nesta/Summary"
+    tag: "KE"
+    file_extension: "log"
+    job_fmt: "yyyy-MM-dd HH:mm:ss"
+
+log_prop:
+    #CN8BJ7C2G1_||_CN8BJ7C2G1_||_296200140_||_V1N03B#629_||_V1N03B#629_||_Main   B_||_2018-11-19 13:39:07.467_||__||__||_TaiJi   Base_||_D626
+    wip_col: "id,sn,wo,hh_part,cust_part,assembline,scantime,na1,na2,product,floor"
+    wip_table: "part_master"
+    wip_dt_fmt: "yyyy-MM-dd HH:mm:ss"
+#    wip_dt_fmt: "yyyy-MM-dd\\tHH:mm:ss.SSS"
+
+    #CN8BJ7C2G1_||_C189220M8PFAC_||_2018-11-19 13:39:07.467_||_F1034891_||_Main B_||_LK_||_F5S43-60001_||_F5S43-60001_||_D626_||_0
+    wip_parts_col: "id,partsn,scantime,opid,assembly_station,part,hh_pard,cust_part,line,disassembly"
+    wip_parts_table: "part_detail"
+    wip_parts_dt_fmt: "yyyy-MM-dd HH:mm:ss"
+
+    #CN8BS7C334_||_TLEOL_||_TLEOL_||_LC_TLEOL_41_||_11/29/2018 8:33:10 AM_||_11/29/2018 8:38:46 AM_||_0_||__||__||_11/29/2018 8:38:46 AM
+    bobcat_col: "sn,station,stationcode,machine,start_time,end_time,istestfail,symptom,desc_,uploadtime,c1,c2,c3"
+    bobcat_table: "test"
+    bobcat_dt_fmt: "yyyy-MM-dd HH:mm:ss"
+#    bobcat_dt_fmt: "MM/dd/yyyy h:m:s a"
+
+#    log_seperator: "\\^"
+
+    log_seperator: "_\\|\\|_"
+
+analysis:
+    fail_condition: "1"
+
