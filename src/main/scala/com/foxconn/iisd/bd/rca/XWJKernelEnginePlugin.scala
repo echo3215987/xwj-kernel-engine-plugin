@@ -11,7 +11,9 @@ import org.apache.spark.sql.{Column, Encoders, SparkSession}
 import org.apache.spark.sql.functions.{regexp_extract, _}
 import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
 
+import scala.collection.mutable.WrappedArray
 import scala.collection.mutable.Seq
+import com.foxconn.iisd.bd.rca.SparkUDF._
 
 object XWJKernelEnginePlugin {
 
@@ -220,35 +222,141 @@ object XWJKernelEnginePlugin {
       //val filepath_xzcompress = "E:\\untar\\"
       //val filepath_xzcompress = "C:\\Users\\foxconn\\Desktop\\RCA\\ask\\new\\newspec_subSeq_PRNU_SiriusFW\\"
       val filepath_xzcompress = "C:\\Users\\foxconn\\Desktop\\RCA\\ask\\"
+      val filepath_output = "C:\\Users\\foxconn\\Desktop\\RCA\\ask\\"
 
-      //val files = filepath_xzcompress + "*.xml"
-      val files = filepath_xzcompress + "WuDang_L7_TLEOL_11_CN94M8702J06MD_1_APR_21_2019_0h_48m_46s.xml"
+      val files = filepath_xzcompress + "*.xml"
+      //val files = filepath_xzcompress + "test.xml"
 
 
       //從CIMation.tar.xz壓縮檔, 解壓縮找出產品:Taiji Base的CIMation xml, 並去除維護(repair)資料
-/*    val fin_tar = Files.newInputStream(Paths.get(filepath_xz))
+      val fin_tar = Files.newInputStream(Paths.get(filepath_xz))
       IoUtils.unxzfile(fin_tar, filepath_xzcompress)
-*/
-      val resultSchema =
-        StructType(
-          Array(
-            StructField("_ComputerName", StringType),
-            StructField("_FileFormatVersion", StringType),
-            StructField("_ProductModel", StringType),
-            StructField("_ProjectName", StringType),
-            StructField("_ProjectVersion", StringType),
-            StructField("_RunDateTimeStarted", StringType),
-            StructField("_RunElapsedTimeSec", StringType),
-            StructField("_RunMode", StringType),
-            StructField("_RunNumber", StringType),
-            StructField("_RunResult", StringType),
-            StructField("_SerialNumber", StringType),
-            StructField("_StationName", StringType),
-            StructField("_StationNumber", StringType)
-          )
-        )
+
       //將xml分成三部分解析, 1.最外層的tag CIMProjectResults, 2.tag sequence 3.step測項
-      var CIMProjectResultsDF = spark.read.format("com.databricks.spark.xml")
+      var rawdataDF = spark.read.text(files)
+        .withColumn("filename", getLast(split(expr("input_file_name()"), "/")))
+        .groupBy("filename").agg(concat_ws("", collect_list("value")).as("value"))
+      var CIMProjectResultsDF = rawdataDF
+        .withColumn("SN", regexp_extract(col("value"),"(SerialNumber=\")(\\w+)(\")" ,2))
+        .withColumn("BUILD_NAME", lit("SOR"))
+        .withColumn("BUILD_DESCRIPTION", lit("SOR"))
+        .withColumn("UNIT_NUMBER", col("SN"))
+        .withColumn("STATION_ID", regexp_extract(col("value"),"(StationNumber=\")(\\w+)" ,2))
+        .withColumn("TEST_STATUS", regexp_extract(col("value"),"(RunResult=\")(\\w+)" ,2))
+        .withColumn("TEST_STARTTIME_TEMP", regexp_extract(col("value"),"(RunDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)" ,2))
+        .withColumn("TEST_STARTTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_STARTTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm"))
+        .withColumn("TEST_ENDTIME_TEMP", regexp_extract(col("value"),"(SeqDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)" ,2))
+        .withColumn("TEST_ENDTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_ENDTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm"))
+        //list failure
+
+
+        .withColumn("TEST_PHASE", lit("MP"))
+        .withColumn("MACHINE_ID", lit("")) //不存就是null
+        .withColumn("FACTORY_CODE", lit("CQ"))
+        //取得floor_line對應碼, 利用STATION_ID的第二位數對應測試樓層跟線體
+        .withColumn("FLOOR_LINE", getFloorLine(col("STATION_ID").substr(2,1)))
+        .withColumn("FLOOR", col("FLOOR_LINE").substr(1,3))
+        .withColumn("LINE_ID", col("FLOOR_LINE").substr(4,1))
+        //五個測項
+
+
+        .withColumn("CREATE_TIME_TEMP", regexp_replace(regexp_replace(regexp_replace(regexp_extract(col("filename"),
+        "([A-Z]{3})_([0-9]+)_([0-9]{4})_([0-9]+h)_([0-9]+m)_([0-9]+s)", 0), "h", ""),
+        "m", ""), "s", ""))
+        .withColumn("CREATE_TIME",
+          expr("from_unixtime(UNIX_TIMESTAMP(CREATE_TIME_TEMP, 'MMM_dd_yyyy_HH_mm_ss'), 'yyyy/MM/dd HH:mm')"))
+        .withColumn("UPDATE_TIME", col("CREATE_TIME"))
+        .withColumn("STATION_NAME", regexp_extract(col("value"),"(StationName=\")(\\w+)" ,2))
+        .withColumn("START_DATE", col("TEST_STARTTIME"))
+        .withColumn("PRODUCT", lit("TaiJi Base"))
+        .withColumn("TEST_VERSION", regexp_extract(col("value"),"(ProjectVersion=\")([^\"]+)" ,2))
+
+      //只留下RunResult等於Exception　或 Pass　或 Fail的三種狀態
+      val originCount = CIMProjectResultsDF.count()
+      var newCIMProjectResultsDF = CIMProjectResultsDF.filter(col("TEST_STATUS").equalTo("Exception")
+        .or(col("TEST_STATUS").equalTo("Pass"))
+        .or(col("TEST_STATUS").equalTo("Fail")))
+
+      val StepDF = rawdataDF
+        .selectExpr("split(value, '<Step ') as Step", "filename")
+        .selectExpr("explode(Step) as Step", "filename")
+        .filter(col("Step").contains("StepName=\""))
+        .withColumn("MAIN_TEST_ITEM", regexp_extract(col("Step"), "(StepName=\")(\\w+)", 2))
+        .withColumn("TEST_RESULT", regexp_extract(col("Step"), "(TestResult=\")(\\w+)", 2))
+        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")(\\w+)", 2))
+        //測試值
+        .withColumn("TEST_VALUE_RAW", regexp_extract(col("Step"), "(PayLoad)([^>]+)", 2))
+        .withColumn("TEST_VALUE_RAW", expr("trim(substring(TEST_VALUE_RAW, 1, length(TEST_VALUE_RAW)-1))"))
+        .withColumn("TEST_VALUE_RAW", split(col("TEST_VALUE_RAW"), "\" "))
+        .withColumn("TEST_SPEC_RAW", regexp_extract(col("Step"), "(<TestParms>)(.+)(</TestParms>)", 2))
+        .withColumn("TEST_SPEC_KEY", splitKey(col("TEST_SPEC_RAW")))
+        .withColumn("TEST_SPEC_VALUE", splitValue(col("TEST_SPEC_RAW")))
+        .withColumn("TEST_SPEC_MAP", arrays_zip(col("TEST_SPEC_KEY"), col("TEST_SPEC_VALUE")))
+        .withColumn("TEST_SPEC_MAP", expr("transform(TEST_SPEC_MAP, x -> concat_ws('=', x.TEST_SPEC_KEY, x.TEST_SPEC_VALUE))"))
+
+      var StepItemValueDF = StepDF.selectExpr("filename", "MAIN_TEST_ITEM", "explode(TEST_VALUE_RAW) as TEST_VALUE_RAW", "TEST_SPEC_MAP")
+        .withColumn("SUB_TEST_ITEM", split(col("TEST_VALUE_RAW"), "=").getItem(0))
+        .withColumn("TEST_VALUE_TEMP", regexp_replace(split(col("TEST_VALUE_RAW"), "=").getItem(1), "\"", ""))
+        .withColumn("TEST_ITEM", concat(col("MAIN_TEST_ITEM"), lit("^D"), col("SUB_TEST_ITEM")))
+        .withColumn("TEST_VALUE", concat(col("TEST_ITEM"), lit("^C"), col("TEST_VALUE_TEMP")))
+        .withColumn("TEST_UNIT", concat(col("TEST_ITEM"), lit("^C"), lit("")))
+        .withColumn("TEST_UPPER_LOWER", getSpec(col("TEST_ITEM"), col("TEST_SPEC_MAP")))
+        .withColumn("TEST_UPPER", concat(col("TEST_ITEM"), lit("^C"), col("TEST_UPPER_LOWER").getItem(0)))
+        .withColumn("TEST_LOWER", concat(col("TEST_ITEM"), lit("^C"), col("TEST_UPPER_LOWER").getItem(1)))
+
+      //最後^A分隔各個測項.測試上下界.測試值,測試單位
+      StepItemValueDF = StepItemValueDF.groupBy("filename")
+        .agg(concat_ws("^A", collect_list("TEST_ITEM")).as("TEST_ITEM"),
+          concat_ws("^A", collect_list("TEST_UPPER")).as("TEST_UPPER"),
+        concat_ws("^A", collect_list("TEST_LOWER")).as("TEST_LOWER"),
+        concat_ws("^A", collect_list("TEST_UNIT")).as("TEST_UNIT"),
+        concat_ws("^A", collect_list("TEST_VALUE")).as("TEST_VALUE"))
+      StepItemValueDF.show(false)
+
+      //取得測試失敗項目清單(CIMProjectResults.Sequence.Step.StepName 当 CIMProjectResults.Sequence.Step.（TestResult='Fail' or TestResult='Exception' ）),
+      //取得測試失敗項目清單說明(CIMProjectResults.Sequence.Step.TestResultInfo 当 CIMProjectResults.Sequence.Step.（TestResult='Fail' or TestResult='Exception' ）)
+      var failStepDF = StepDF.filter(col("TEST_RESULT").equalTo("Fail").or(col("TEST_RESULT").equalTo("Exception")))
+        .groupBy("filename").agg(concat_ws(";", collect_list("MAIN_TEST_ITEM")).as("LIST_OF_FAILURE"),
+        concat_ws(";", collect_list("TEST_RESULT_INFO")).as("LIST_OF_FAILURE_DETAIL"))
+
+      var finalResultsDF = newCIMProjectResultsDF.join(StepItemValueDF, "filename")
+        .join(failStepDF, "filename")
+
+//println(StepDF.count())
+      //StepDF.drop("Step", "filename").show(120, false)
+      //newCIMProjectResultsDF.drop("filename", "value", "TEST_STARTTIME_TEMP", "TEST_ENDTIME_TEMP", "CREATE_TIME_TEMP", "FLOOR_LINE").show(false)
+
+      finalResultsDF
+        .select("SN", "BUILD_NAME", "BUILD_DESCRIPTION", "UNIT_NUMBER", "STATION_ID", "TEST_STATUS", "TEST_STARTTIME", "TEST_ENDTIME",
+        "LIST_OF_FAILURE", "LIST_OF_FAILURE_DETAIL", "TEST_PHASE", "MACHINE_ID", "FACTORY_CODE", "FLOOR", "LINE_ID", "TEST_ITEM", "TEST_VALUE",
+        "TEST_UNIT", "TEST_LOWER", "TEST_UPPER", "CREATE_TIME", "UPDATE_TIME", "STATION_NAME", "START_DATE", "PRODUCT", "TEST_VERSION")
+        .map(x => x.mkString("", "#", "").replaceAll("#", dataSeperator))
+        .coalesce(1)
+        .write
+        .text(filepath_output+".txt")
+      //.text(configLoader.getString(logPathSection, "bobcat_d_tmp_path") + flag)
+      //.write.option("delimiter", "_||_").csv(filepath_output+"finalResult")
+
+      //刪除RunResult不等於Exception　或 Pass　或 Fail的三種狀態的XML
+      val afterFilterCount = newCIMProjectResultsDF.count()
+      if(originCount != afterFilterCount){
+        //CIMProjectResultsDF = CIMProjectResultsDF.selectExpr("input_file_name() as filename")
+        //var newCIMProjectResultsTempDF = newCIMProjectResultsDF.selectExpr("input_file_name() as filename")
+        val removedCIMDF =
+        CIMProjectResultsDF.join(newCIMProjectResultsDF,
+          CIMProjectResultsDF("filename") === newCIMProjectResultsDF("filename"), "leftanti")
+        val list = removedCIMDF.select("filename").map(row => row.mkString(""))(Encoders.STRING)collect()
+
+        for(filename <- list){
+          //delete RunResult !=  Exception, Pass, Fail
+          println("delete RunResult !=  Exception, Pass, Fail file: " + filename)
+          FileUtils.deleteQuietly(new File(filename.replace("file:/", "")))
+        }
+      }
+
+
+
+      /*var CIMProjectResultsDF = spark.read.format("com.databricks.spark.xml")
         .option("rowTag", "CIMProjectResults")
         .schema(resultSchema)
         .load(files)
@@ -258,7 +366,9 @@ object XWJKernelEnginePlugin {
         .or(col("_RunResult").equalTo("Fail"))
       )
       CIMProjectResultsDF.show(25, false)
+      */
 
+/*
       val afterFilterCount = newCIMProjectResultsDF.count()
       if(originCount != afterFilterCount){
         CIMProjectResultsDF = CIMProjectResultsDF.selectExpr("input_file_name() as filename")
@@ -308,8 +418,7 @@ object XWJKernelEnginePlugin {
 
       newCIMProjectResultsDF.show(25, false)
 
-      //udf: get_last, 取split最後一個element
-      val get_last = udf((xs: Seq[String]) => (xs.last))
+
 
       var SequenceDF = spark.read.text(files)
         .withColumn("filename", get_last(split(expr("input_file_name()"), "/")))
@@ -388,7 +497,7 @@ object XWJKernelEnginePlugin {
           .withColumn("TEST_VALUE", regexp_extract(col("Step"), "<DataLog (.+)</DataLog>", 0))
       StepItemDF.show(100,false)
 
-
+*/
 
 
     } catch {
