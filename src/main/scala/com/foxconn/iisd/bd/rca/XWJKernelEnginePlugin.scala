@@ -284,7 +284,7 @@ object XWJKernelEnginePlugin {
         .filter(col("Step").contains("StepName=\""))
         .withColumn("MAIN_TEST_ITEM", regexp_extract(col("Step"), "(StepName=\")(\\w+)", 2))
         .withColumn("TEST_RESULT", regexp_extract(col("Step"), "(TestResult=\")(\\w+)", 2))
-        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")([^\"]+)", 2))
+        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")(\\w+)", 2))
         //測試值
         .withColumn("TEST_VALUE_RAW", regexp_extract(col("Step"), "(PayLoad)([^>]+)", 2))
         .withColumn("TEST_VALUE_RAW", expr("trim(substring(TEST_VALUE_RAW, 1, length(TEST_VALUE_RAW)-1))"))
