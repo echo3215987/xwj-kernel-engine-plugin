@@ -14,6 +14,7 @@ import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructTyp
 import scala.collection.mutable.WrappedArray
 import scala.collection.mutable.Seq
 import com.foxconn.iisd.bd.rca.SparkUDF._
+import org.apache.spark.sql.SaveMode
 
 object XWJKernelEnginePlugin {
 
@@ -224,14 +225,14 @@ object XWJKernelEnginePlugin {
       val filepath_xzcompress = "C:\\Users\\foxconn\\Desktop\\RCA\\ask\\"
       val filepath_output = "C:\\Users\\foxconn\\Desktop\\RCA\\ask\\"
 
-      val files = filepath_xzcompress + "*.xml"
-      //val files = filepath_xzcompress + "test.xml"
+      //val files = filepath_xzcompress + "*.xml"
+      val files = filepath_xzcompress + "new\\WuDang_L7_TLEOL_11_CN94M8702J06MD_1_APR_21_2019_0h_48m_46s.xml"
 
 
       //從CIMation.tar.xz壓縮檔, 解壓縮找出產品:Taiji Base的CIMation xml, 並去除維護(repair)資料
-      val fin_tar = Files.newInputStream(Paths.get(filepath_xz))
+      /*val fin_tar = Files.newInputStream(Paths.get(filepath_xz))
       IoUtils.unxzfile(fin_tar, filepath_xzcompress)
-
+*/
       //將xml分成三部分解析, 1.最外層的tag CIMProjectResults, 2.tag sequence 3.step測項
       var rawdataDF = spark.read.text(files)
         .withColumn("filename", getLast(split(expr("input_file_name()"), "/")))
@@ -244,14 +245,14 @@ object XWJKernelEnginePlugin {
         .withColumn("STATION_ID", regexp_extract(col("value"),"(StationNumber=\")(\\w+)" ,2))
         .withColumn("TEST_STATUS", regexp_extract(col("value"),"(RunResult=\")(\\w+)" ,2))
         .withColumn("TEST_STARTTIME_TEMP", regexp_extract(col("value"),"(RunDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)" ,2))
-        .withColumn("TEST_STARTTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_STARTTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm"))
+        .withColumn("TEST_STARTTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_STARTTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm:ss"))
         .withColumn("TEST_ENDTIME_TEMP", regexp_extract(col("value"),"(SeqDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)" ,2))
-        .withColumn("TEST_ENDTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_ENDTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm"))
+        .withColumn("TEST_ENDTIME", from_unixtime(expr("UNIX_TIMESTAMP(TEST_ENDTIME_TEMP,'MM/dd/yyyy hh:mm:ss aa')"), "yyyy/MM/dd HH:mm:ss"))
         //list failure
 
 
         .withColumn("TEST_PHASE", lit("MP"))
-        .withColumn("MACHINE_ID", lit("")) //不存就是null
+        .withColumn("MACHINE_ID", lit("null"))
         .withColumn("FACTORY_CODE", lit("CQ"))
         //取得floor_line對應碼, 利用STATION_ID的第二位數對應測試樓層跟線體
         .withColumn("FLOOR_LINE", getFloorLine(col("STATION_ID").substr(2,1)))
@@ -264,7 +265,7 @@ object XWJKernelEnginePlugin {
         "([A-Z]{3})_([0-9]+)_([0-9]{4})_([0-9]+h)_([0-9]+m)_([0-9]+s)", 0), "h", ""),
         "m", ""), "s", ""))
         .withColumn("CREATE_TIME",
-          expr("from_unixtime(UNIX_TIMESTAMP(CREATE_TIME_TEMP, 'MMM_dd_yyyy_HH_mm_ss'), 'yyyy/MM/dd HH:mm')"))
+          expr("from_unixtime(UNIX_TIMESTAMP(CREATE_TIME_TEMP, 'MMM_dd_yyyy_HH_mm_ss'), 'yyyy/MM/dd HH:mm:ss')"))
         .withColumn("UPDATE_TIME", col("CREATE_TIME"))
         .withColumn("STATION_NAME", regexp_extract(col("value"),"(StationName=\")(\\w+)" ,2))
         .withColumn("START_DATE", col("TEST_STARTTIME"))
@@ -283,7 +284,7 @@ object XWJKernelEnginePlugin {
         .filter(col("Step").contains("StepName=\""))
         .withColumn("MAIN_TEST_ITEM", regexp_extract(col("Step"), "(StepName=\")(\\w+)", 2))
         .withColumn("TEST_RESULT", regexp_extract(col("Step"), "(TestResult=\")(\\w+)", 2))
-        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")(\\w+)", 2))
+        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")([^\"]+)", 2))
         //測試值
         .withColumn("TEST_VALUE_RAW", regexp_extract(col("Step"), "(PayLoad)([^>]+)", 2))
         .withColumn("TEST_VALUE_RAW", expr("trim(substring(TEST_VALUE_RAW, 1, length(TEST_VALUE_RAW)-1))"))
@@ -297,20 +298,20 @@ object XWJKernelEnginePlugin {
       var StepItemValueDF = StepDF.selectExpr("filename", "MAIN_TEST_ITEM", "explode(TEST_VALUE_RAW) as TEST_VALUE_RAW", "TEST_SPEC_MAP")
         .withColumn("SUB_TEST_ITEM", split(col("TEST_VALUE_RAW"), "=").getItem(0))
         .withColumn("TEST_VALUE_TEMP", regexp_replace(split(col("TEST_VALUE_RAW"), "=").getItem(1), "\"", ""))
-        .withColumn("TEST_ITEM", concat(col("MAIN_TEST_ITEM"), lit("^D"), col("SUB_TEST_ITEM")))
-        .withColumn("TEST_VALUE", concat(col("TEST_ITEM"), lit("^C"), col("TEST_VALUE_TEMP")))
-        .withColumn("TEST_UNIT", concat(col("TEST_ITEM"), lit("^C"), lit("")))
+        .withColumn("TEST_ITEM", concat(col("MAIN_TEST_ITEM"), lit("\004"), col("SUB_TEST_ITEM")))
+        .withColumn("TEST_VALUE", concat(col("TEST_ITEM"), lit("\003"), col("TEST_VALUE_TEMP")))
+        .withColumn("TEST_UNIT", concat(col("TEST_ITEM"), lit("\003"), lit("null")))
         .withColumn("TEST_UPPER_LOWER", getSpec(col("TEST_ITEM"), col("TEST_SPEC_MAP")))
-        .withColumn("TEST_UPPER", concat(col("TEST_ITEM"), lit("^C"), col("TEST_UPPER_LOWER").getItem(0)))
-        .withColumn("TEST_LOWER", concat(col("TEST_ITEM"), lit("^C"), col("TEST_UPPER_LOWER").getItem(1)))
+        .withColumn("TEST_UPPER", concat(col("TEST_ITEM"), lit("\003"), col("TEST_UPPER_LOWER").getItem(0)))
+        .withColumn("TEST_LOWER", concat(col("TEST_ITEM"), lit("\003"), col("TEST_UPPER_LOWER").getItem(1)))
 
       //最後^A分隔各個測項.測試上下界.測試值,測試單位
       StepItemValueDF = StepItemValueDF.groupBy("filename")
-        .agg(concat_ws("^A", collect_list("TEST_ITEM")).as("TEST_ITEM"),
-          concat_ws("^A", collect_list("TEST_UPPER")).as("TEST_UPPER"),
-        concat_ws("^A", collect_list("TEST_LOWER")).as("TEST_LOWER"),
-        concat_ws("^A", collect_list("TEST_UNIT")).as("TEST_UNIT"),
-        concat_ws("^A", collect_list("TEST_VALUE")).as("TEST_VALUE"))
+        .agg(concat_ws("\001", collect_list("TEST_ITEM")).as("TEST_ITEM"),
+          concat_ws("\001", collect_list("TEST_UPPER")).as("TEST_UPPER"),
+        concat_ws("\001", collect_list("TEST_LOWER")).as("TEST_LOWER"),
+        concat_ws("\001", collect_list("TEST_UNIT")).as("TEST_UNIT"),
+        concat_ws("\001", collect_list("TEST_VALUE")).as("TEST_VALUE"))
       StepItemValueDF.show(false)
 
       //取得測試失敗項目清單(CIMProjectResults.Sequence.Step.StepName 当 CIMProjectResults.Sequence.Step.（TestResult='Fail' or TestResult='Exception' ）),
@@ -333,9 +334,9 @@ object XWJKernelEnginePlugin {
         .map(x => x.mkString("", "#", "").replaceAll("#", dataSeperator))
         .coalesce(1)
         .write
+        .mode(SaveMode.Overwrite)
         .text(filepath_output+".txt")
-      //.text(configLoader.getString(logPathSection, "bobcat_d_tmp_path") + flag)
-      //.write.option("delimiter", "_||_").csv(filepath_output+"finalResult")
+      finalResultsDF.printSchema()
 
       //刪除RunResult不等於Exception　或 Pass　或 Fail的三種狀態的XML
       val afterFilterCount = newCIMProjectResultsDF.count()

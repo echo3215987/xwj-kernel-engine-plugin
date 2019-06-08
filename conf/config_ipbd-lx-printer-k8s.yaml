@@ -1,5 +1,5 @@
 spark:
-    job_name: "cartridgeNestaKernelEngine"
+    job_name: "ipbd-lx-printer-xwj-KernelEngine-plugin"
     master: "k8s://192.168.1.63:6443"
     conf: "spark.driver.memory=6g;
            spark.executor.memory=6g;
@@ -20,7 +20,7 @@ cockroachdb:
     host:       "10.57.232.61"
     port:       "26257"
     sslmode:    "require"
-    database:   "rca-dev"
+    database:   "rca-ipbd-lx-printer"
     username:   "bigdata"
     password:   "bigdata"
     conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
@@ -28,18 +28,11 @@ cockroachdb:
 mariadb:
     adapter:    "mysql"
     host:       "10.57.232.61"
-    port:       "3308"
-    database:   "rca-dev"
-    username:   "edgeserver"
-    password:   "Foxconn123654!@"
+    port:       "30849"
+    database:   "rca-ipbd-lx-printer"
+    username:   "root"
+    password:   "bigdata"
     conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&useUnicode=true&characterEncoding=UTF-8"
-#    adapter:    "mysql"
-#    host:       "10.57.232.61"
-#    port:       "30849"
-#    database:   "rca-ipbd-lx-printer"
-#    username:   "root"
-#    password:   "bigdata"
-#    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
 
 general:
     factory: "CQ"
@@ -70,20 +63,6 @@ part_datecode_rules:
     Acumen Chip : "PARTSN,0,0"
     Film : "PARTSN,0,0"
 
-#part_vendor_rules:
-#    CD: "Kronos AIO Carriage PCA,PARTSN,PARTSN,0,2"
-#    CAL: "Tudou(Taiji CR),PARTSN,0,3"
-#    LK: "TURTLE WW INTERNAL PS,PARTSN,8,10"
-#    C44: "Taiji ASSY MPCA IA,PARTSN,0,3"
-#    4BH6: "CIS Module (Tempo-GT-CR),PARTSN,0,4"
-#
-#part_datecode_rules:
-#    CD: "Kronos AIO Carriage PCA,PARTSN,2,6"
-#    CAL: "Tudou(Taiji CR),PARTSN,3,6"
-#    LK: "TURTLE WW INTERNAL PS,PARTSN,1,5"
-#    C44: "Taiji ASSY MPCA IA,PARTSN,3,6"
-#    4BH6: "CIS Module (Tempo-GT-CR),PARTSN,9,14"
-
 local_log_path:
     data_base_path: "/Users/hanlinux/data/rca/IPPD-L10"
     wip_path: "{{data_base_path}}/IPPD-L10_SFC_20190313.txt"
@@ -92,6 +71,9 @@ local_log_path:
     wip_file_limits: "30"
     wip_parts_file_limits: "30"
     bobcat_file_limits: "0"
+
+    test_detail_path: "{{data_base_path}}/part-00000-698d0746-eff6-426e-9611-3c71a96a100a-c000.txt"
+    test_detail_file_limits: "1"
 
 minio_log_path:
     data_base_path: "s3a://rca-ftp/Cartridge-Nesta/Data"
@@ -103,6 +85,9 @@ minio_log_path:
     wip_file_limits: "1"
     wip_parts_file_limits: "1"
     bobcat_file_limits: "1"
+
+    test_detail_path: "{{data_base_path}}/TEST_DETAIL"
+    test_detail_file_limits: "1"
 
 summary_log_path:
     data_base_path: "s3a://rca-dev/Cartridge-Nesta/Summary"
@@ -126,9 +111,11 @@ log_prop:
     bobcat_col: "sn,station,stationcode,machine,start_time,end_time,istestfail,symptom,desc_,uploadtime,c1,c2,c3"
     bobcat_table: "test"
     bobcat_dt_fmt: "yyyy-MM-dd HH:mm:ss"
-#    bobcat_dt_fmt: "MM/dd/yyyy h:m:s a"
 
-#    log_seperator: "\\^"
+    #CN95I870ZC06MD_||_SOR_||_SOR_||_CN95I870ZC06MD_||_L7_TLEOL_06_||_Exception_||_2019/05/18 06:36_||_2019/05/18 06:36_||_PcaVerifyFirmwareRev_||_Error_||_MP_||__||_CQ_||_D62_||_2_||_ProcPCClockSync^DResultInfo^APcaVerifyFirmwareRev^DResultInfo^APcaVerifyFirmwareRev^DExpectedVersion^APcaVerifyFirmwareRev^DReadVersion^APcaVerifyFirmwareRev^DDateTimeStarted^APcaVerifyFirmwareRev^DActualFWUpdate^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C5/18/2019 5:29:48 AM^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_2019/05/18 06:36_||_2019/05/18 06:36_||_TLEOL_||_2019/05/18 06:36_||_TaiJi Base_||_42.3.8 REV_37_Taiji25
+    test_detail_col: "sn,build_name,build_description,unit_number,station_id,test_status,test_starttime,test_endtime,list_of_failure,list_of_failure_detail,test_phase,machine_id,factory_code,floor,line_id,test_item,test_value,test_unit,test_lower,test_upper,create_time,update_time,station_name,start_date,product,test_version"
+    test_detail_table: "test_detail"
+    test_detail_dt_fmt: "yyyy-MM-dd HH:mm:ss"
 
     log_seperator: "_\\|\\|_"
 
