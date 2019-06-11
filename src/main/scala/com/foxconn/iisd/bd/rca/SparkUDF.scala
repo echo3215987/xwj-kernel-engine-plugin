@@ -53,10 +53,10 @@ object SparkUDF {
             case "PcaBoardRevision\004ReadBoardRev" => {
                 getEqualSpec(compare, "ExpectedBoardRev")
             }
-            case "caSetDerivativeTrayIDNVM_Taiji.1\004UnitInfoSerialNumber" => {
+            case "PcaSetDerivativeTrayIDNVM_Taiji.1\004UnitInfoSerialNumber" => {
                 getEqualSpec(compare, "Serial_Number")
             }
-            case "caSetDerivativeTrayIDNVM_Taiji.1\004DerivativeRead" => {
+            case "PcaSetDerivativeTrayIDNVM_Taiji.1\004DerivativeRead" => {
                 getEqualSpec(compare, "Derivative")
             }
             case "Scan3PWM\004AvgPWMHomeMoveOut" | "Scan3PWM\004AvgPWMHomeMoveBack" => {
@@ -156,7 +156,7 @@ object SparkUDF {
             }
             //Scan3MOMS
             //1.SpecTopMarginErrorMin_mm<TopMarginError_mm<SpecTopMarginErrorMax_mm
-            case "Scan3PRNU_SiriusFW\004TopMarginError_mm" => {
+            case "Scan3MOMS\004TopMarginError_mm" => {
                 getMaxMinSpec(compare, "SpecTopMarginErrorMax_mm", "SpecTopMarginErrorMin_mm")
             }
             //2.SpecBotMarginErrorMin_mm<BotMarginError_mm<SpecBotMarginErrorMax_mm
@@ -299,51 +299,51 @@ object SparkUDF {
             }
             //10.MaxAvg_RedBar_Ch1<SpecRedNomCh123_Bits8.1+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_RedBar_Ch1" => {
-                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8", 0, "SpecMaxChipTolFromNom_Bits8")
             }
             //11.MaxAvg_RedBar_Ch2<SpecRedNomCh123_Bits8.2+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_RedBar_Ch2" => {
-                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //12.MaxAvg_RedBar_Ch3<SpecRedNomCh123_Bits8.3+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_RedBar_Ch3" => {
-                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecRedNomCh123_Bits8", 2,"SpecMaxChipTolFromNom_Bits8")
             }
             //13.MinAvg_RedBar_Ch1>SpecRedNomCh123_Bits8.1-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_RedBar_Ch1" => {
-                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8.1", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8", 0, "SpecMaxChipTolFromNom_Bits8")
             }
             //14.MinAvg_RedBar_Ch2>SpecRedNomCh123_Bits8.2-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_RedBar_Ch2" => {
-                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //15.MinAvg_RedBar_Ch3>SpecRedNomCh123_Bits8.3-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_RedBar_Ch3" => {
-                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecRedNomCh123_Bits8", 2,"SpecMaxChipTolFromNom_Bits8")
             }
             //16.MaxAvg_GreBar_Ch1<SpecGreenNomCh123_Bits8.1+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_GreBar_Ch1" => {
-                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8.1", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8", 0,"SpecMaxChipTolFromNom_Bits8")
             }
             //17.MaxAvg_GreBar_Ch2<SpecGreenNomCh123_Bits8.2+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_GreBar_Ch2" => {
-                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //18.MaxAvg_GreBar_Ch3<SpecGreenNomCh123_Bits8.3+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_GreBar_Ch3" => {
-                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecGreenNomCh123_Bits8", 2, "SpecMaxChipTolFromNom_Bits8")
             }
             //19.MinAvg_GreBar_Ch1>SpecGreenNomCh123_Bits8.1-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_GreBar_Ch1" => {
-                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8.1", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8", 0, "SpecMaxChipTolFromNom_Bits8")
             }
             //20.MinAvg_GreBar_Ch2>SpecGreenNomCh123_Bits8.2-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_GreBar_Ch2" => {
-                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //21.MinAvg_GreBar_Ch3>SpecGreenNomCh123_Bits8.3-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_GreBar_Ch3" => {
-                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecGreenNomCh123_Bits8", 2, "SpecMaxChipTolFromNom_Bits8")
                 /*var lowerValue = compare.filter(testparm=> testparm.contains("SpecGreenNomCh123_Bits8.3")).mkString.split("=")(1).toFloat
                 var lowerSub = compare.filter(testparm=> testparm.contains("SpecMaxChipTolFromNom_Bits8")).mkString.split("=")(1).toFloat
 
@@ -353,15 +353,15 @@ object SparkUDF {
             }
             //22.MaxAvg_BluBar_Ch1<SpecBlueNomCh123_Bits8.1+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_BluBar_Ch1" => {
-                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8.1", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8", 0, "SpecMaxChipTolFromNom_Bits8")
             }
             //23.MaxAvg_BluBar_Ch2<SpecBlueNomCh123_Bits8.2+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_BluBar_Ch2" => {
-                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //24.MaxAvg_BluBar_Ch3<SpecBlueNomCh123_Bits8.3+SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MaxAvg_BluBar_Ch3" => {
-                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMaxComputationSpec(compare, "SpecBlueNomCh123_Bits8", 2, "SpecMaxChipTolFromNom_Bits8")
                 /*
                 var upper = compare.filter(testparm=> testparm.contains("SpecBlueNomCh123_Bits8.3") | testparm.contains("SpecMaxChipTolFromNom_Bits8"))
                   .map(_.split("=")(1).toFloat).sum.toString
@@ -370,15 +370,15 @@ object SparkUDF {
             }
             //25.MinAvg_BluBar_Ch1>SpecBlueNomCh123_Bits8.1-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_BluBar_Ch1" => {
-                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8.1", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8", 0, "SpecMaxChipTolFromNom_Bits8")
             }
             //26.MinAvg_BluBar_Ch2>SpecBlueNomCh123_Bits8.2-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_BluBar_Ch2" => {
-                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8.2", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8", 1, "SpecMaxChipTolFromNom_Bits8")
             }
             //27.MinAvg_BluBar_Ch3>SpecBlueNomCh123_Bits8.3-SpecMaxChipTolFromNom_Bits8
             case "Scan3IL\004MinAvg_BluBar_Ch3" => {
-                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8.3", "SpecMaxChipTolFromNom_Bits8")
+                getMinComputationSpec(compare, "SpecBlueNomCh123_Bits8", 2, "SpecMaxChipTolFromNom_Bits8")
             }
             //28.MaxStd_RedBar_Ch1<SpecMaxChipStd_Bits8
             case "Scan3IL\004MaxStd_RedBar_Ch1" => {
@@ -560,7 +560,7 @@ object SparkUDF {
     }
 
     def getSpecBoundary(compare: Seq[String], spec: String): String = {
-        compare.filter(testparm => testparm.contains(spec)).mkString.split("=")(1)
+        compare.filter(testparm => testparm.contains(spec+"=")).mkString.split("=")(1)
     }
     //上下界相等
     def getEqualSpec(compare: Seq[String], spec: String): Vector[String] = {
@@ -571,12 +571,12 @@ object SparkUDF {
     //只有上界
     def getMaxSpec(compare: Seq[String], spec: String): Vector[String] = {
         var upper = getSpecBoundary(compare, spec)
-        var lower = "null"
+        var lower = ""
         Vector(upper, lower)
     }
     //只有下界
     def getMinSpec(compare: Seq[String], spec: String): Vector[String] = {
-        var upper = "null"
+        var upper = ""
         var lower = getSpecBoundary(compare, spec)
         Vector(upper, lower)
     }
@@ -587,18 +587,22 @@ object SparkUDF {
         Vector(upper, lower)
     }
     //上界特別計算
-    def getMaxComputationSpec(compare: Seq[String], specMax1: String, specMax2: String): Vector[String] = {
-        var upper = compare.filter(testparm=> testparm.contains(specMax1) | testparm.contains(specMax2))
-          .map(_.split("=")(1).toFloat).sum.toString
-        var lower = "null"
+    def getMaxComputationSpec(compare: Seq[String], specMax1: String, idx: Int, specMax2: String): Vector[String] = {
+        var upperfirst = compare.filter(testparm=> testparm.contains(specMax1)).mkString.split("=")(1).split(";")(idx).toFloat
+        var upperSecond = compare.filter(testparm=> testparm.contains(specMax2)).mkString.split("=")(1).toFloat
+        var upper = (upperfirst + upperSecond).toString
+
+        /*var upper = compare.filter(testparm=> testparm.contains(specMax1) | testparm.contains(specMax2))
+          .map(_.split("=")(1).toFloat).sum.toString*/
+        var lower = ""
         Vector(upper, lower)
     }
     //下界特別計算
-    def getMinComputationSpec(compare: Seq[String], specMinValue: String, specMinSub: String): Vector[String] = {
-        var lowerValue = compare.filter(testparm=> testparm.contains(specMinValue)).mkString.split("=")(1).toFloat
+    def getMinComputationSpec(compare: Seq[String], specMinValue: String, idx: Int, specMinSub: String): Vector[String] = {
+        var lowerValue = compare.filter(testparm=> testparm.contains(specMinValue)).mkString.split("=")(1).split(";")(idx).toFloat
         var lowerSub = compare.filter(testparm=> testparm.contains(specMinSub)).mkString.split("=")(1).toFloat
 
-        var upper = "null"
+        var upper = ""
         var lower = (lowerValue - lowerSub).toString
         Vector(upper, lower)
     }
