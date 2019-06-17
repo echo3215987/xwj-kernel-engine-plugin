@@ -1,5 +1,5 @@
 
-name := "XWJ_kernel_engine_bigtable"
+name := "xwj_kernel_engine_plugin"
 
 version := "0.1"
 
