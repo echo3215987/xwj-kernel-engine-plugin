@@ -51,7 +51,7 @@ object XWJKernelEnginePlugin {
 
   def start(): Unit = {
 
-    var date: java.util.Date = new java.util.Date();
+    var date: java.util.Date = new java.util.Date()
     val flag = date.getTime().toString
     println(s"flag: $flag")
 
@@ -104,7 +104,6 @@ object XWJKernelEnginePlugin {
     spark.sparkContext.hadoopConfiguration.set("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false")
 
     import spark.implicits._
-
     val numExecutors = spark.conf.get("spark.executor.instances", "1").toInt
     val testDetailDTFmt =  configLoader.getString("log_prop", "test_detail_dt_fmt")
 
