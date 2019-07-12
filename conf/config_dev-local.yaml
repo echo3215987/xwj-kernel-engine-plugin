@@ -2,7 +2,8 @@ spark:
     job_name: "dev-local-xwj-KernelEngine-plugin"
     master: "local"
     conf: "spark.driver.memory=2g;
-           spark.executor.memory=2g"
+           spark.executor.memory=2g;
+           spark.sql.session.timeZone=CST"
 
 minio:
     endpoint:   "http://10.57.232.167:31359"
@@ -80,7 +81,8 @@ local_log_path:
     test_detail_file_limits: "1"
 
 minio_log_path:
-    data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
+    #data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
+    data_base_path: "s3a://rca-dev/IPPD-L10/Data"
     wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
     wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"
     bobcat_path: "{{data_base_path}}/Bobcat_D/"

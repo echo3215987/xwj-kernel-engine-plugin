@@ -74,10 +74,12 @@ assemblyMergeStrategy in assembly := {
       case _ => MergeStrategy.discard
     }
   case PathList(ps @ _*)
-    if ps contains "foxconn" => MergeStrategy.first
-  case PathList(ps @ _*)
-    if ps contains "databricks" => MergeStrategy.first
-  case PathList("org", "apache", "commons", "compress", ps @ _*) => MergeStrategy.first
+//    if ps contains "foxconn" => MergeStrategy.first
+    if ps contains "foxconn" => MergeStrategy.discard
+ /* case PathList(ps @ _*)
+    if ps contains "databricks" => MergeStrategy.first*/
+//  case PathList("org", "apache", "commons", "compress", ps @ _*) => MergeStrategy.first
   case x =>
-    MergeStrategy.discard
+//    MergeStrategy.discard
+      MergeStrategy.first
 }
