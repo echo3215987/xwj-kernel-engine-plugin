@@ -127,7 +127,7 @@ object XWJKernelEnginePlugin {
 
     //"sn,build_name,build_description,unit_number,station_id,test_status,test_starttime,test_endtime,list_of_failure,list_of_failure_detail,test_phase,machine_id,factory_code,floor,line_id,test_item,test_value,test_unit,test_lower,test_upper,create_time,update_time,station_name,start_date,product,test_version"
     //CN95I870ZC06MD_||_SOR_||_SOR_||_CN95I870ZC06MD_||_L7_TLEOL_06_||_Exception_||_2019/05/18 06:36_||_2019/05/18 06:36_||_PcaVerifyFirmwareRev_||_Error_||_MP_||__||_CQ_||_D62_||_2_||_ProcPCClockSync^DResultInfo^APcaVerifyFirmwareRev^DResultInfo^APcaVerifyFirmwareRev^DExpectedVersion^APcaVerifyFirmwareRev^DReadVersion^APcaVerifyFirmwareRev^DDateTimeStarted^APcaVerifyFirmwareRev^DActualFWUpdate^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C5/18/2019 5:29:48 AM^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_2019/05/18 06:36_||_2019/05/18 06:36_||_TLEOL_||_2019/05/18 06:36_||_TaiJi Base_||_42.3.8 REV_37_Taiji25
-    val testDetailColumns = configLoader.getString("log_prop", "test_detail_col")
+    val testDetailColumnStr = configLoader.getString("log_prop", "test_detail_col")
 
     //val dataSeperator = configLoader.getString("log_prop", "log_seperator")
     val dataSeperatorNonEscape = configLoader.getString("log_prop", "log_seperator_non_escape")
@@ -152,8 +152,8 @@ object XWJKernelEnginePlugin {
       }
 
       //將xml分成三部分解析, 1.最外層的tag CIMProjectResults, 2.tag sequence 3.step測項
-//      var rawdataDF = spark.read.text("s3a://rca-dev/IPPD-L10/Data/TEST_DETAIL_COMPRESSION_OUTPUT/FAILED/1561441702387" + "/*.xml")
-      var rawdataDF = spark.read.text(testDetailDestPath.toString + "/*.xml")
+      var rawdataDF = spark.read.text("s3a://rca-dev/IPPD-L10/Data/TEST_DETAIL_COMPRESSION_OUTPUT/FAILED/1561441702387" + "/*.xml")
+//      var rawdataDF = spark.read.text(testDetailDestPath.toString + "/*.xml")
         .withColumn("filename", getLast(split(expr("input_file_name()"), "/")))
         .groupBy("filename").agg(concat_ws("", collect_list("value")).as("value"))
         .withColumn("TEST_STATUS", lower(regexp_extract(col("value"), "(RunResult=\")(\\w+)", 2)))
@@ -169,7 +169,7 @@ object XWJKernelEnginePlugin {
         .or(col("TEST_STATUS").equalTo("fail")))
 
       val newCIMProjectResultsDF = CIMProjectResultsDF
-        .withColumn("SN", regexp_extract(col("value"), "(SerialNumber=\")(\\w+)(\")", 2))
+        .withColumn("SN", substring(regexp_extract(col("value"), "(SerialNumber=\")(\\w+)(\")", 2), 0, 10))
         .withColumn("BUILD_NAME", lit("SOR"))
         .withColumn("BUILD_DESCRIPTION", lit("SOR"))
         .withColumn("UNIT_NUMBER", col("SN"))
@@ -256,11 +256,14 @@ object XWJKernelEnginePlugin {
           .withColumn("LIST_OF_FAILURE", lit("")).withColumn("LIST_OF_FAILURE_DETAIL", lit(""))
       }
 finalResultsDF.show(false)
+
+      val testDetailColumns = testDetailColumnStr.toUpperCase.split(",")
       finalResultsDF
-        .select("SN", "BUILD_NAME", "BUILD_DESCRIPTION", "UNIT_NUMBER", "STATION_ID", "TEST_STATUS", "TEST_STARTTIME", "TEST_ENDTIME",
-          "LIST_OF_FAILURE", "LIST_OF_FAILURE_DETAIL", "TEST_PHASE", "MACHINE_ID", "FACTORY_CODE", "FLOOR", "LINE_ID", "TEST_ITEM", "TEST_VALUE",
-          "TEST_UNIT", "TEST_LOWER", "TEST_UPPER", "TEST_ITEM_RESULT", "TEST_ITEM_RESULT_DETAIL","CREATE_TIME", "UPDATE_TIME", "STATION_NAME",
-          "START_DATE", "PRODUCT", "TEST_VERSION")
+//        .select("SN", "BUILD_NAME", "BUILD_DESCRIPTION", "UNIT_NUMBER", "STATION_ID", "TEST_STATUS", "TEST_STARTTIME", "TEST_ENDTIME",
+//          "LIST_OF_FAILURE", "LIST_OF_FAILURE_DETAIL", "TEST_PHASE", "MACHINE_ID", "FACTORY_CODE", "FLOOR", "LINE_ID", "TEST_ITEM", "TEST_VALUE",
+//          "TEST_UNIT", "TEST_LOWER", "TEST_UPPER", "TEST_ITEM_RESULT", "TEST_ITEM_RESULT_DETAIL","CREATE_TIME", "UPDATE_TIME", "STATION_NAME",
+//          "START_DATE", "PRODUCT", "TEST_VERSION")
+        .selectExpr(testDetailColumns: _*)
         .map(x => x.mkString("", dataSeperatorNonEscape, ""))
         .coalesce(1)
         .write
