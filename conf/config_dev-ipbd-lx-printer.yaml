@@ -1,5 +1,5 @@
 spark:
-    job_name: "ipbd-lx-printer-xwj-KernelEngine-plugin"
+    job_name: "dev-local-xwj-KernelEngine-plugin"
     master: "k8s://192.168.1.63:6443"
     conf: "spark.driver.memory=6g;
            spark.executor.memory=6g;
@@ -20,7 +20,7 @@ cockroachdb:
     host:       "10.57.232.61"
     port:       "26257"
     sslmode:    "require"
-    database:   "rca-ipbd-lx-printer"
+    database:   "rca-dev"
     username:   "bigdata"
     password:   "bigdata"
     conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
@@ -28,10 +28,10 @@ cockroachdb:
 mariadb:
     adapter:    "mysql"
     host:       "10.57.232.61"
-    port:       "30849"
-    database:   "rca-ipbd-lx-printer"
-    username:   "root"
-    password:   "bigdata"
+    port:       "3308"
+    database:   "rca-dev"
+    username:   "edgeserver"
+    password:   "Foxconn123654!@"
     conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&useUnicode=true&characterEncoding=UTF-8"
 
 general:
@@ -64,28 +64,32 @@ part_datecode_rules:
     Film : "PARTSN,0,0"
 
 local_log_path:
-    data_base_path: "/Users/hanlinux/data/rca/IPPD-L10"
-    wip_path: "{{data_base_path}}/IPPD-L10_SFC_20190313.txt"
-    wip_parts_path: "{{data_base_path}}/IPPD-L10_PARTS_20190313.txt"
-    bobcat_path: "{{data_base_path}}/IPPD-L10_TEST_20190313.txt"
-    wip_file_limits: "30"
-    wip_parts_file_limits: "30"
-    bobcat_file_limits: "0"
+    data_base_path: "file:/C:/Users/foxconn/Desktop/DATA"
+    wip_path: "{{data_base_path}}/r_wip_sfc_0_20190410_164427_165927_01.txt"
+    wip_parts_path: "{{data_base_path}}/r_wip_parts_sfc_0_20190410_165841_171341_01.txt"
+    bobcat_path: "{{data_base_path}}/F6U19-30001_bob_0_20190409_082020_082458_02.txt"
+    wip_file_limits: "1"
+    wip_parts_file_limits: "1"
+    bobcat_file_limits: "1"
 
     test_detail_compression_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION/vfpa_trans_fail_list_20190513-20190520.tar.xz"
     test_detail_compression_tmp_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION_TMP/"
     test_detail_compression_output_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION_OUTPUT/"
-    test_detail_compression_output_successful_path: "{{test_detail_compression_output_path}}/SUCCESSFUL"
-    test_detail_compression_output_failed_path: "{{test_detail_compression_output_path}}/FAILED"
+    test_detail_compression_output_successful_path: "{{test_detail_compression_output_path}}/SUCCESSFUL/"
+    test_detail_compression_output_failed_path: "{{test_detail_compression_output_path}}/FAILED/"
     #temp for validation
-    test_detail_compression_output_result_path: "{{test_detail_compression_output_path}}/RESULT"
-
+    test_detail_compression_output_result_path: "{{test_detail_compression_output_path}}/RESULT/"
 
     test_detail_path: "{{data_base_path}}/RCA/ask/.txt"
     test_detail_file_limits: "1"
 
+    bobcat_d_xwj_path: "{{data_base_path}}/F6U19-30001_bob_0_20190409_082020_082458_02.txt"
+    bobcat_d_xwj_tmp_path: "{{data_base_path}}/Bobcat_D_XWJ_TMP/"
+    bobcat_d_xwj_file_limits: "1"
+
 minio_log_path:
-    data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
+    #data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
+    data_base_path: "s3a://rca-dev/IPPD-L10/Data"
     wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
     wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"
     bobcat_path: "{{data_base_path}}/Bobcat_D/"
@@ -98,16 +102,16 @@ minio_log_path:
     test_detail_compression_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION/"
     test_detail_compression_tmp_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION_TMP/"
     test_detail_compression_output_path: "{{data_base_path}}/TEST_DETAIL_COMPRESSION_OUTPUT/"
-    test_detail_compression_output_successful_path: "{{test_detail_compression_output_path}}/SUCCESSFUL"
-    test_detail_compression_output_failed_path: "{{test_detail_compression_output_path}}/FAILED"
+    test_detail_compression_output_successful_path: "{{test_detail_compression_output_path}}/SUCCESSFUL/"
+    test_detail_compression_output_failed_path: "{{test_detail_compression_output_path}}/FAILED/"
     #temp for validation
-    test_detail_compression_output_result_path: "{{test_detail_compression_output_path}}/RESULT"
+    test_detail_compression_output_result_path: "{{test_detail_compression_output_path}}/RESULT/"
 
-    test_detail_path: "{{data_base_path}}/TEST_DETAIL"
+    test_detail_path: "{{data_base_path}}/TEST_DETAIL/"
     test_detail_file_limits: "1"
 
 summary_log_path:
-    data_base_path: "s3a://rca-dev/Cartridge-Nesta/Summary"
+    data_base_path: "s3a://test"
     tag: "KE"
     file_extension: "log"
     job_fmt: "yyyy-MM-dd HH:mm:ss"
@@ -117,7 +121,6 @@ log_prop:
     wip_col: "id,sn,wo,hh_part,cust_part,assembline,scantime,na1,na2,product,floor"
     wip_table: "part_master"
     wip_dt_fmt: "yyyy-MM-dd HH:mm:ss"
-#    wip_dt_fmt: "yyyy-MM-dd\\tHH:mm:ss.SSS"
 
     #CN8BJ7C2G1_||_C189220M8PFAC_||_2018-11-19 13:39:07.467_||_F1034891_||_Main B_||_LK_||_F5S43-60001_||_F5S43-60001_||_D626_||_0
     wip_parts_col: "id,partsn,scantime,opid,assembly_station,part,hh_pard,cust_part,line,disassembly"
@@ -130,7 +133,7 @@ log_prop:
     bobcat_dt_fmt: "yyyy-MM-dd HH:mm:ss"
 
     #CN95I870ZC06MD_||_SOR_||_SOR_||_CN95I870ZC06MD_||_L7_TLEOL_06_||_Exception_||_2019/05/18 06:36_||_2019/05/18 06:36_||_PcaVerifyFirmwareRev_||_Error_||_MP_||__||_CQ_||_D62_||_2_||_ProcPCClockSync^DResultInfo^APcaVerifyFirmwareRev^DResultInfo^APcaVerifyFirmwareRev^DExpectedVersion^APcaVerifyFirmwareRev^DReadVersion^APcaVerifyFirmwareRev^DDateTimeStarted^APcaVerifyFirmwareRev^DActualFWUpdate^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C5/18/2019 5:29:48 AM^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_2019/05/18 06:36_||_2019/05/18 06:36_||_TLEOL_||_2019/05/18 06:36_||_TaiJi Base_||_42.3.8 REV_37_Taiji25
-    test_detail_col: "sn,build_name,build_description,unit_number,station_id,test_status,test_starttime,test_endtime,list_of_failure,list_of_failure_detail,test_phase,machine_id,factory_code,floor,line_id,test_item,test_value,test_unit,test_lower,test_upper,create_time,update_time,station_name,start_date,product,test_version"
+    test_detail_col: "sn,build_name,build_description,unit_number,station_id,test_status,test_starttime,test_endtime,list_of_failure,list_of_failure_detail,test_phase,machine_id,factory_code,floor,line_id,test_item,test_value,test_unit,test_lower,test_upper,test_item_result,test_item_result_detail,create_time,update_time,station_name,start_date,product,test_version"
     test_detail_table: "test_detail"
     test_detail_dt_fmt: "yyyy-MM-dd HH:mm:ss"
 

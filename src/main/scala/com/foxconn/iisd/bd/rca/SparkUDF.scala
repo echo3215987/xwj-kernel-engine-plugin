@@ -3,20 +3,42 @@ package com.foxconn.iisd.bd.rca
 import java.io._
 import java.net.URI
 
-import com.foxconn.iisd.bd.rca.XWJKernelEnginePlugin.configLoader
-import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream}
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import com.foxconn.iisd.bd.rca.XWJKernelEnginePlugin.{configLoader, ctrlACode, ctrlCCode}
+import org.apache.spark.sql.functions.{col, udf, when}
 
 import scala.collection.mutable.{Seq, WrappedArray}
 
 object SparkUDF {
+    //Catridge----start
+    def replaceTestResult = udf {
+        result: Int =>{
+            var resultValue = "fail"
+            if(result == 0)
+                resultValue = "pass"
+            resultValue
+        }
+    }
+
+    def replaceTestResultDetail = udf {
+        result: String =>{
+            var resultValue = result
+            if(result.equals("0"))
+                resultValue = "pass"
+            resultValue
+        }
+    }
+
+    def genTestItemSpec = udf {
+        (test_item: String) =>{
+            test_item.split(ctrlACode).map(item => item.concat(ctrlCCode)).mkString(ctrlACode)
+        }
+    }
+    //Catridge----end
 
     //取split最後一個element
     def getLast = udf((xs: Seq[String]) => (xs.last))
+
+    //IPPD----start
     //取得測試樓層與線體對應表
     def getFloorLine = udf {
         s: String =>
@@ -606,5 +628,5 @@ object SparkUDF {
         var lower = (lowerValue - lowerSub).toString
         Vector(upper, lower)
     }
-
+    //IPPD----end
 }

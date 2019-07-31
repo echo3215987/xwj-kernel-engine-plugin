@@ -1,8 +1,13 @@
 spark:
-    job_name: "local-xwj-KernelEngine-plugin"
-    master: "local"
-    conf: "spark.driver.memory=2g;
-           spark.executor.memory=2g;"
+    job_name: "staging-xwj-KernelEngine-plugin"
+    master: "k8s://192.168.1.63:6443"
+    conf: "spark.driver.memory=6g;
+       spark.executor.memory=6g;
+       spark.executor.instances=1;
+       spark.memory.offHeap.enabled=true;
+       spark.memory.offHeap.size=4g;
+       spark.eventLog.dir=/mnt/fuse_cephfs/data/spark/eventLog;
+       spark.eventLog.enabled=true"
 
 minio:
     endpoint:   "http://10.57.232.167:31359"
@@ -84,7 +89,7 @@ local_log_path:
 
 minio_log_path:
     #data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
-    data_base_path: "s3a://rca-dev/Cartridge-Nesta/Data"
+    data_base_path: "s3a://rca-staging/Cartridge-Nesta/Data"
     wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
     wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"
     bobcat_path: "{{data_base_path}}/Bobcat_D/"

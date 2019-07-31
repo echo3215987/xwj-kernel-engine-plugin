@@ -1,16 +1,13 @@
 package com.foxconn.iisd.bd.rca
 
-import java.io.File
 import java.net.URI
-import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-import org.apache.commons.io.FileUtils
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.{Column, Encoders, SparkSession}
-import org.apache.spark.sql.functions.{regexp_extract, _}
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+import org.apache.spark.sql.functions.{regexp_extract, when, _}
+import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType, IntegerType}
 
 import scala.collection.mutable.WrappedArray
 import scala.collection.mutable.Seq
@@ -22,13 +19,19 @@ object XWJKernelEnginePlugin {
 
   var configLoader = new ConfigLoader()
   val datetimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
+  val ctrlACode = "\001"
+  val ctrlCCode = "\003"
+  val downLimit = "_DOWNLIMIT"
+  val upLimit = "_UPLIMIT"
+  val lowerLimit = "_LOWER_LIMIT"
+  val upperLimit = "_UPPER_LIMIT"
 
   def main(args: Array[String]): Unit = {
 
     val limit = 1
     var count = 0
 
-    println("xwj-v1")
+    println("xwj-plugin-v1")
 
     while (count < limit) {
       println(s"count: $count")
@@ -115,12 +118,12 @@ object XWJKernelEnginePlugin {
 
     //s3a://" + bucket + "/
 
-    val testDetailCompressionPath = configLoader.getString(logPathSection, "test_detail_compression_path")
-    val testDetailCompressionTmpPath = configLoader.getString(logPathSection, "test_detail_compression_tmp_path")
-    //val testDetailCompressionOutputPath = configLoader.getString(logPathSection, "test_detail_compression_output_path")
-    val testDetailCompressionSuccessfulPath = configLoader.getString(logPathSection, "test_detail_compression_output_successful_path")
-    val testDetailCompressionFailedPath = configLoader.getString(logPathSection, "test_detail_compression_output_failed_path")
-    val testDetailCompressionResultPath = configLoader.getString(logPathSection, "test_detail_compression_output_result_path")
+
+    //Bobcat_d_xwj
+    val bobcatXWJColumnStr = configLoader.getString("log_prop", "bobcat_xwj_col")
+    val bobcatXWJPath = configLoader.getString(logPathSection, "bobcat_d_xwj_path")
+//    val bobcatDXWJTempPath = configLoader.getString(logPathSection, "bobcat_d_xwj_tmp_path")
+    val bobcatXWJFileLmits = configLoader.getString(logPathSection, "bobcat_d_xwj_file_limits").toInt
 
     val testDetailPath = configLoader.getString(logPathSection, "test_detail_path")
     val testDetailFileLmits = configLoader.getString(logPathSection, "test_detail_file_limits").toInt
@@ -129,173 +132,152 @@ object XWJKernelEnginePlugin {
     //CN95I870ZC06MD_||_SOR_||_SOR_||_CN95I870ZC06MD_||_L7_TLEOL_06_||_Exception_||_2019/05/18 06:36_||_2019/05/18 06:36_||_PcaVerifyFirmwareRev_||_Error_||_MP_||__||_CQ_||_D62_||_2_||_ProcPCClockSync^DResultInfo^APcaVerifyFirmwareRev^DResultInfo^APcaVerifyFirmwareRev^DExpectedVersion^APcaVerifyFirmwareRev^DReadVersion^APcaVerifyFirmwareRev^DDateTimeStarted^APcaVerifyFirmwareRev^DActualFWUpdate^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C5/18/2019 5:29:48 AM^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_2019/05/18 06:36_||_2019/05/18 06:36_||_TLEOL_||_2019/05/18 06:36_||_TaiJi Base_||_42.3.8 REV_37_Taiji25
     val testDetailColumnStr = configLoader.getString("log_prop", "test_detail_col")
 
-    //val dataSeperator = configLoader.getString("log_prop", "log_seperator")
+    val dataSeperator = configLoader.getString("log_prop", "log_seperator")
     val dataSeperatorNonEscape = configLoader.getString("log_prop", "log_seperator_non_escape")
+
     ///////////
     //載入資料//
     ///////////
 
     try {
 
-      val testDetailDestPath = IoUtils.decompressMinioFiles(spark,
-        flag,
-        testDetailCompressionPath, //source
-        testDetailFileLmits,
-        testDetailCompressionResultPath //result
-      )
+//      val bobcatDXWJTempPath = IoUtils.flatMinioFiles(spark,
+//        flag,
+//        bobcatDXWJPath, //source
+//        bobcatDXWJFileLmits
+//      )
 
-      val fileSystem = FileSystem.get(URI.create(testDetailDestPath.toString), spark.sparkContext.hadoopConfiguration)
-      val testDetailDestPathFiles = fileSystem.listFiles(testDetailDestPath, true)
-      if(testDetailDestPathFiles == 0){
-        println("count: 0 xml")
-        sys.exit
-      }
+//      spark.read.text(bobcatDXWJTempPath.toString + "/*").show(false)
 
-      //將xml分成三部分解析, 1.最外層的tag CIMProjectResults, 2.tag sequence 3.step測項
-      var rawdataDF = spark.read.text("s3a://rca-dev/IPPD-L10/Data/TEST_DETAIL_COMPRESSION_OUTPUT/FAILED/1561441702387" + "/*.xml")
-//      var rawdataDF = spark.read.text(testDetailDestPath.toString + "/*.xml")
-        .withColumn("filename", getLast(split(expr("input_file_name()"), "/")))
-        .groupBy("filename").agg(concat_ws("", collect_list("value")).as("value"))
-        .withColumn("TEST_STATUS", lower(regexp_extract(col("value"), "(RunResult=\")(\\w+)", 2)))
+//        var bobcatSourceDF = spark.read.text("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190729/F6U16-30001_bob_0_TEST_R_20190729114205589.txt")
+//        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190729/F6U16-30001_bob_0_TEST_R_20190729114205589.txt")
+        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190725/F6U16-30001_bob_0_TEST_R_20190725035700509.txt")
+        var bobcatSourceDf = IoUtils.getDfFromPath(spark, bobcatDestPaths.toString, bobcatXWJColumnStr, dataSeperator)
 
-      //只留下RunResult等於Exception　或 Pass　或 Fail的三種狀態
-      val originCount = rawdataDF.count()
-      println("row data count: " + originCount)
-      //      var newCIMProjectResultsDF = CIMProjectResultsDF.filter(col("TEST_STATUS").equalTo("Exception")
-      //        .or(col("TEST_STATUS").equalTo("Pass"))
-      //        .or(col("TEST_STATUS").equalTo("Fail")))
-      val CIMProjectResultsDF = rawdataDF.filter(col("TEST_STATUS").equalTo("exception")
-        .or(col("TEST_STATUS").equalTo("pass"))
-        .or(col("TEST_STATUS").equalTo("fail")))
 
-      val newCIMProjectResultsDF = CIMProjectResultsDF
-        .withColumn("SN", substring(regexp_extract(col("value"), "(SerialNumber=\")(\\w+)(\")", 2), 0, 10))
-        .withColumn("BUILD_NAME", lit("SOR"))
-        .withColumn("BUILD_DESCRIPTION", lit("SOR"))
-        .withColumn("UNIT_NUMBER", col("SN"))
-        .withColumn("STATION_ID", regexp_extract(col("value"), "(StationNumber=\")(\\w+)", 2))
-//        .withColumn("TEST_STATUS", lower(regexp_extract(col("value"), "(RunResult=\")(\\w+)", 2)))
-        .withColumn("TEST_STARTTIME_TEMP", regexp_extract(col("value"), "(RunDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)", 2))
-        .withColumn("TEST_STARTTIME", from_unixtime(unix_timestamp($"TEST_STARTTIME_TEMP", "MM/dd/yyyy hh:mm:ss aa"), testDetailDTFmt))
-        .withColumn("TEST_ENDTIME_TEMP", regexp_extract(col("value"), "(SeqDateTimeStarted=\")((?:[^\"\\\\]+|\\\\.)*)", 2))
-        .withColumn("TEST_ENDTIME", from_unixtime(unix_timestamp($"TEST_ENDTIME_TEMP", "MM/dd/yyyy hh:mm:ss aa"), testDetailDTFmt))
-        //list failure
-        .withColumn("TEST_PHASE", lit("MP"))
-        .withColumn("MACHINE_ID", lit("null"))
-        .withColumn("FACTORY_CODE", lit(factory))
-        //取得floor_line對應碼, 利用STATION_ID的第二位數對應測試樓層跟線體
-        .withColumn("FLOOR_LINE", getFloorLine(col("STATION_ID").substr(2, 1)))
-        .withColumn("FLOOR", col("FLOOR_LINE").substr(1, 3))
-        .withColumn("LINE_ID", col("FLOOR_LINE").substr(4, 1))
-        //五個測項
-        .withColumn("CREATE_TIME_TEMP", regexp_replace(regexp_replace(regexp_replace(regexp_extract(col("filename"),
-        "([A-Z]{3})_([0-9]+)_([0-9]{4})_([0-9]+h)_([0-9]+m)_([0-9]+s)", 0), "h", ""),
-        "m", ""), "s", ""))
-        .withColumn("CREATE_TIME", from_unixtime(unix_timestamp($"CREATE_TIME_TEMP", "MMM_dd_yyyy_HH_mm_ss"), testDetailDTFmt))
-        //expr("from_unixtime(UNIX_TIMESTAMP(CREATE_TIME_TEMP, 'MMM_dd_yyyy_HH_mm_ss'), 'yyyy/MM/dd HH:mm:ss')"))
-        .withColumn("UPDATE_TIME", col("CREATE_TIME"))
-        .withColumn("STATION_NAME", regexp_extract(col("value"), "(StationName=\")(\\w+)", 2))
-        .withColumn("START_DATE", col("TEST_STARTTIME"))
-        .withColumn("PRODUCT", lit("TaiJi Base"))
-        .withColumn("TEST_VERSION", regexp_extract(col("value"), "(ProjectVersion=\")([^\"]+)", 2))
+        val specs = List(downLimit, upLimit, lowerLimit, upperLimit)
+        val lowerSpecs = List(downLimit, lowerLimit)
+        val upperSpecs = List(upLimit, upperLimit)
+        val excludeItems = List("PRE_WEIGHT:PRE_WEIGHT", "POST_WEIGHT:POST_WEIGHT")
+        //filter exclude test item(PRE_WEIGHT:PRE_WEIGHT, POST_WEIGHT:POST_WEIGHT)
+        bobcatSourceDf = bobcatSourceDf.filter(row => !excludeItems.exists(row.getAs("test_item").toString.contains))
+          .withColumn("product", split(getLast(split(expr("input_file_name()"), "/")), "_").getItem(0))
+          .withColumn("test_version", lit("VER"))
+          //沒有unit的値, 先留空值
+          .withColumn("test_value", concat_ws(ctrlCCode, col("test_item"), col("test_value_temp")))
+          .withColumn("test_unit", lit(""))
+          .withColumn("test_unit", concat_ws(ctrlCCode, col("test_item"), col("test_unit")))
+          .withColumn("test_item_result", replaceTestResult(col("test_item_result_temp")))
+          .withColumn("test_item_result", concat_ws(ctrlCCode, col("test_item"), col("test_item_result")))
+          .withColumn("test_item_result_detail_temp", replaceTestResultDetail(col("test_item_result_detail_temp")))
+          .withColumn("test_item_result_detail", col("test_item_result_detail_temp"))
+          .withColumn("test_item_result_detail", concat_ws(ctrlCCode, col("test_item"), col("test_item_result_detail")))
 
-      val StepDF = CIMProjectResultsDF
-        .selectExpr("split(value, '<Step ') as Step", "filename")
-        .selectExpr("explode(Step) as Step", "filename")
-        .filter(col("Step").contains("StepName=\""))
-        .withColumn("MAIN_TEST_ITEM", regexp_extract(col("Step"), "(StepName=\")(.+)(\"\\sStepNumber=)", 2))
-        .withColumn("TEST_RESULT", lower(regexp_extract(col("Step"), "(TestResult=\")(\\w+)", 2)))
-        .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")(.+)(\"\\sTestDateTimeStarted=)", 2))
-        //測試值
-        .withColumn("TEST_VALUE_RAW", regexp_extract(col("Step"), "(PayLoad)([^>]+)", 2))
-        .withColumn("TEST_VALUE_RAW", expr("trim(substring(TEST_VALUE_RAW, 1, length(TEST_VALUE_RAW)-1))"))
-        .withColumn("TEST_VALUE_RAW", split(col("TEST_VALUE_RAW"), "\" "))
-        .withColumn("TEST_SPEC_RAW", regexp_extract(col("Step"), "(<TestParms>)(.+)(</TestParms>)", 2))
-        .withColumn("TEST_SPEC_KEY", splitKey(col("TEST_SPEC_RAW")))
-        .withColumn("TEST_SPEC_VALUE", splitValue(col("TEST_SPEC_RAW")))
-        .withColumn("TEST_SPEC_MAP", arrays_zip(col("TEST_SPEC_KEY"), col("TEST_SPEC_VALUE")))
-        .withColumn("TEST_SPEC_MAP", expr("transform(TEST_SPEC_MAP, x -> concat_ws('=', x.TEST_SPEC_KEY, x.TEST_SPEC_VALUE))"))
+//        bobcatSourceDf.show(false)
 
-      var StepItemValueDF = StepDF.selectExpr("filename", "MAIN_TEST_ITEM", "explode(TEST_VALUE_RAW) as TEST_VALUE_RAW", "TEST_SPEC_MAP", "TEST_RESULT", "TEST_RESULT_INFO")
-        .withColumn("SUB_TEST_ITEM", split(col("TEST_VALUE_RAW"), "=").getItem(0))
-        .withColumn("TEST_VALUE_TEMP", regexp_replace(split(col("TEST_VALUE_RAW"), "=").getItem(1), "\"", ""))
-        .withColumn("TEST_ITEM", concat(col("MAIN_TEST_ITEM"), lit("\004"), col("SUB_TEST_ITEM")))
-        .withColumn("TEST_VALUE", concat(col("TEST_ITEM"), lit("\003"), col("TEST_VALUE_TEMP")))
-        .withColumn("TEST_UNIT", concat(col("TEST_ITEM"), lit("\003"), lit("")))
-        .withColumn("TEST_UPPER_LOWER", getSpec(col("TEST_ITEM"), col("TEST_SPEC_MAP")))
-        .withColumn("TEST_UPPER", concat(col("TEST_ITEM"), lit("\003"), col("TEST_UPPER_LOWER").getItem(0)))
-        .withColumn("TEST_LOWER", concat(col("TEST_ITEM"), lit("\003"), col("TEST_UPPER_LOWER").getItem(1)))
-        //新增測項的測試結果
-        .withColumn("TEST_ITEM_RESULT", concat(col("TEST_ITEM"), lit("\003"), col("TEST_RESULT")))
-        .withColumn("TEST_ITEM_RESULT_DETAIL", concat(col("TEST_ITEM"), lit("\003"), col("TEST_RESULT_INFO")))
+        val specCols = List("product", "sn", "station_name", "test_starttime", "test_version", "test_item", "test_value_temp")
+        val specDf = bobcatSourceDf.filter(row => specs.exists(row.getAs("test_item").toString.contains))
+          //product, sn, station_name, test_starttime, test_version, test_item
+          .selectExpr(specCols: _*)
+          .dropDuplicates()
+          .withColumnRenamed("test_item", "test_item_spec")
+          .withColumn("test_item", regexp_replace(col("test_item_spec"), lowerLimit + "|" + downLimit + "|" + upperLimit + "|" + upLimit, ""))
+          .withColumn("test_lower", when(col("test_item_spec").contains(downLimit).or(col("test_item_spec").contains(lowerLimit)), col("test_value_temp")))
+          .withColumn("test_upper", when(col("test_item_spec").contains(upLimit).or(col("test_item_spec").contains(upperLimit)), col("test_value_temp")))
+          .withColumn("test_lower", when(col("test_lower").isNotNull, concat_ws(ctrlCCode, col("test_item"), col("test_lower"))))
+          .withColumn("test_upper", when(col("test_upper").isNotNull, concat_ws(ctrlCCode, col("test_item"), col("test_upper"))))
 
-      //最後^A分隔各個測項.測試上下界.測試值,測試單位,測試結果, 測試結果細項
-      StepItemValueDF = StepItemValueDF.groupBy("filename")
-        .agg(concat_ws("\001", collect_list("TEST_ITEM")).as("TEST_ITEM"),
-          concat_ws("\001", collect_list("TEST_UPPER")).as("TEST_UPPER"),
-          concat_ws("\001", collect_list("TEST_LOWER")).as("TEST_LOWER"),
-          concat_ws("\001", collect_list("TEST_UNIT")).as("TEST_UNIT"),
-          concat_ws("\001", collect_list("TEST_VALUE")).as("TEST_VALUE"),
-          concat_ws("\001", collect_list("TEST_ITEM_RESULT")).as("TEST_ITEM_RESULT"),
-          concat_ws("\001", collect_list("TEST_ITEM_RESULT_DETAIL")).as("TEST_ITEM_RESULT_DETAIL")
-        )
+//        specDf.show(false)
 
-      //取得測試失敗項目清單(CIMProjectResults.Sequence.Step.StepName 当 CIMProjectResults.Sequence.Step.（TestResult='Fail' or TestResult='Exception' ）),
-      //取得測試失敗項目清單說明(CIMProjectResults.Sequence.Step.TestResultInfo 当 CIMProjectResults.Sequence.Step.（TestResult='Fail' or TestResult='Exception' ）)
-      var failStepDF = StepDF
-        //.filter(col("TEST_RESULT").equalTo("Fail").or(col("TEST_RESULT").equalTo("Exception")))
-        .filter(col("TEST_RESULT").equalTo("fail").or(col("TEST_RESULT").equalTo("exception")))
-        .groupBy("filename").agg(concat_ws("\001", collect_list("MAIN_TEST_ITEM")).as("LIST_OF_FAILURE"),
-        concat_ws("\001", collect_list("TEST_RESULT_INFO")).as("LIST_OF_FAILURE_DETAIL"))
+        //exclude test_item_spec
+        bobcatSourceDf = bobcatSourceDf.filter(row => !specs.exists(row.getAs("test_item").toString.contains))
 
-      var finalResultsDF = newCIMProjectResultsDF.join(StepItemValueDF, "filename")
-      if (failStepDF.count() > 0) {
-        finalResultsDF = finalResultsDF.join(failStepDF, "filename")
-      } else {
-        finalResultsDF = finalResultsDF
-          .withColumn("LIST_OF_FAILURE", lit("")).withColumn("LIST_OF_FAILURE_DETAIL", lit(""))
-      }
-finalResultsDF.show(false)
+        val bobcatDistinctDf = bobcatSourceDf.dropDuplicates("product", "sn", "station_name", "test_starttime", "test_version", "test_item")
 
-      val testDetailColumns = testDetailColumnStr.toUpperCase.split(",")
-      finalResultsDF
-//        .select("SN", "BUILD_NAME", "BUILD_DESCRIPTION", "UNIT_NUMBER", "STATION_ID", "TEST_STATUS", "TEST_STARTTIME", "TEST_ENDTIME",
-//          "LIST_OF_FAILURE", "LIST_OF_FAILURE_DETAIL", "TEST_PHASE", "MACHINE_ID", "FACTORY_CODE", "FLOOR", "LINE_ID", "TEST_ITEM", "TEST_VALUE",
-//          "TEST_UNIT", "TEST_LOWER", "TEST_UPPER", "TEST_ITEM_RESULT", "TEST_ITEM_RESULT_DETAIL","CREATE_TIME", "UPDATE_TIME", "STATION_NAME",
-//          "START_DATE", "PRODUCT", "TEST_VERSION")
-        .selectExpr(testDetailColumns: _*)
-        .map(x => x.mkString("", dataSeperatorNonEscape, ""))
-        .coalesce(1)
-        .write
-        .text(testDetailCompressionTmpPath + flag + "/" + "temp")
-println(testDetailCompressionTmpPath + flag + "/" + "temp")
-
-      //刪除RunResult不等於Exception　或 Pass　或 Fail的三種狀態的XML
-      val afterFilterCount = newCIMProjectResultsDF.count()
-println("filter run result count: " + afterFilterCount)
-      if (originCount != afterFilterCount) {
-        val removedCIMDF =
-          rawdataDF.join(newCIMProjectResultsDF,
-            rawdataDF("filename") === newCIMProjectResultsDF("filename"), "leftanti")
-        val list = removedCIMDF.select("filename").map(row => row.mkString(""))(Encoders.STRING) collect()
-
-        for (filename <- list) {
-          //delete RunResult !=  Exception, Pass, Fail
-          println("delete RunResult !=  Exception, Pass, Fail file: " + testDetailCompressionTmpPath + filename)
-          IoUtils.deleteFileFromCompression_Temp(spark,
-            flag,
-            testDetailCompressionTmpPath)
-          //FileUtils.deleteQuietly(new File(filename.replace("file:/", "")))
+        val specGroupbyCols = List("product", "sn", "station_name", "test_starttime", "test_version", "test_item")
+        val cols = List("test_lower", "test_upper")
+        var specTempJoinBobDf = spark.emptyDataFrame
+        for(colName <- cols){
+          //add colName element into specGroupbyCols list
+          val tempCols = colName :: specGroupbyCols
+          val specTempDf = specDf.selectExpr(tempCols: _*).filter(col(colName).isNotNull)
+          if(specTempJoinBobDf.isEmpty)
+            specTempJoinBobDf = bobcatDistinctDf.join(specTempDf, specGroupbyCols, "left")
+          else
+            specTempJoinBobDf = specTempJoinBobDf.join(specTempDf, specGroupbyCols, "left")
         }
-      }
+
+        specTempJoinBobDf = specTempJoinBobDf.groupBy("product", "sn", "station_name", "test_starttime", "test_version")
+            .agg(concat_ws(ctrlACode, collect_list("test_item")).as("test_item"),
+              concat_ws(ctrlACode, collect_list("test_upper")).as("test_upper"),
+              concat_ws(ctrlACode, collect_list("test_lower")).as("test_lower"),
+              concat_ws(ctrlACode, collect_list("test_unit")).as("test_unit"),
+              concat_ws(ctrlACode, collect_list("test_value")).as("test_value"),
+              concat_ws(ctrlACode, collect_list("test_item_result")).as("test_item_result"),
+              concat_ws(ctrlACode, collect_list("test_item_result_detail")).as("test_item_result_detail"),
+              max(col("test_item_result_temp")).as("test_status")
+            )
+
+        //failure list, use ^A(SOH) separation
+        val failDf = bobcatSourceDf.filter(col("test_item_result_temp").equalTo(1))
+          .groupBy("product", "sn", "station_name", "test_starttime", "test_version")
+          .agg(concat_ws(ctrlACode, collect_list("test_item")).as("list_of_failure"),
+            concat_ws(ctrlACode, collect_set("test_item_result_detail_temp")).as("list_of_failure_detail"))
+
+        val groupByCols = List("product", "sn", "station_name", "test_starttime", "test_version")
+        var finalResultsDF = specTempJoinBobDf.join(failDf, groupByCols, "left")
+
+        //gen output file
+        //(1)add fixed value column
+        finalResultsDF = finalResultsDF.withColumn("build_name", lit("MP"))
+          .withColumn("build_description", lit("MP"))
+          .withColumn("unit_number", col("sn"))
+          .withColumn("station_id", col("station_name"))
+          .withColumn("test_endtime", col("test_starttime"))
+          .withColumn("test_phase", lit(""))
+          .withColumn("factory_code", lit("LH"))
+          .withColumn("floor", lit("D2-4F"))
+          .withColumn("line_id", lit("null"))
+          .withColumn("create_time", col("test_starttime"))
+          .withColumn("update_time", col("test_starttime"))
+          .withColumn("start_date", col("test_starttime"))
+        finalResultsDF = finalResultsDF.join(bobcatDistinctDf.dropDuplicates(groupByCols)
+          .select("product", "sn", "station_name", "test_starttime", "test_version", "machine_id"),
+          groupByCols)
+
+        //(2)replace test_status value
+        finalResultsDF = finalResultsDF.withColumn("test_status", replaceTestResult(col("test_status")))
+
+        //(3)if test_upper or test_lower is null, give 'test_item^'
+        finalResultsDF = finalResultsDF.withColumn("test_upper",
+          when(col("test_upper").equalTo(""), genTestItemSpec(col("test_item"))).otherwise(col("test_upper")))
+          .withColumn("test_lower", when(col("test_lower").equalTo(""), genTestItemSpec(col("test_item"))).otherwise(col("test_lower")))
+        //(4)if list_of_failure or list_of_failure_detail is null, give ''
+        finalResultsDF = finalResultsDF.withColumn("list_of_failure",
+          when(col("list_of_failure").isNull, lit("")).otherwise(col("list_of_failure")))
+          .withColumn("list_of_failure_detail",
+            when(col("list_of_failure_detail").isNull, lit("")).otherwise(col("list_of_failure_detail")))
+
+        finalResultsDF.show(false)
+        finalResultsDF.where(col("test_status").equalTo("fail")).show(false)
+
+        val testDetailColumns = testDetailColumnStr.toUpperCase.split(",")
+        println(finalResultsDF.count())
+        finalResultsDF
+          .selectExpr(testDetailColumns: _*)
+          .map(x => x.mkString("", dataSeperatorNonEscape, ""))
+          .coalesce(1)
+          .write
+          .text(testDetailPath + flag)
+
       //成功
-      IoUtils.moveFileToTestDetail(spark, flag, testDetailCompressionTmpPath, testDetailCompressionSuccessfulPath, testDetailPath)
+//      IoUtils.moveFileToTestDetail(spark, flag, testDetailCompressionTmpPath, testDetailCompressionSuccessfulPath, testDetailPath)
 
     } catch {
       case ex: Exception => {
         println("===> " + ex.printStackTrace())
         //失敗
-        IoUtils.moveFileToFailed(spark, flag, testDetailCompressionTmpPath, testDetailCompressionFailedPath, testDetailPath)
+//        IoUtils.moveFileToFailed(spark, flag, testDetailCompressionTmpPath, testDetailCompressionFailedPath, testDetailPath)
       }
     }
 
