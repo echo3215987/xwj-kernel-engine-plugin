@@ -83,7 +83,7 @@ local_log_path:
     bobcat_d_xwj_file_limits: "1"
 
 minio_log_path:
-    #data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
+    #data_base_path: "s3a://rca-dev/IPPD-L10/Data"
     data_base_path: "s3a://rca-dev/Cartridge-Nesta/Data"
     wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
     wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"

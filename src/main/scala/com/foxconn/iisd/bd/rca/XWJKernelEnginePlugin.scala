@@ -141,20 +141,16 @@ object XWJKernelEnginePlugin {
 
     try {
 
-//      val bobcatDXWJTempPath = IoUtils.flatMinioFiles(spark,
-//        flag,
-//        bobcatDXWJPath, //source
-//        bobcatDXWJFileLmits
-//      )
+      val bobcatDestPaths = IoUtils.flatMinioFiles(spark,
+        flag,
+        bobcatXWJPath, //source
+        bobcatXWJFileLmits
+      )
 
-//      spark.read.text(bobcatDXWJTempPath.toString + "/*").show(false)
-
-//        var bobcatSourceDF = spark.read.text("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190729/F6U16-30001_bob_0_TEST_R_20190729114205589.txt")
 //        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190729/F6U16-30001_bob_0_TEST_R_20190729114205589.txt")
-        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190725/F6U16-30001_bob_0_TEST_R_20190725035700509.txt")
+//        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190725/F6U16-30001_bob_0_TEST_R_20190725035700509.txt")
         var bobcatSourceDf = IoUtils.getDfFromPath(spark, bobcatDestPaths.toString, bobcatXWJColumnStr, dataSeperator)
-
-
+        println("source_count: " + bobcatSourceDf.count())
         val specs = List(downLimit, upLimit, lowerLimit, upperLimit)
         val lowerSpecs = List(downLimit, lowerLimit)
         val upperSpecs = List(upLimit, upperLimit)
@@ -262,7 +258,8 @@ object XWJKernelEnginePlugin {
         finalResultsDF.where(col("test_status").equalTo("fail")).show(false)
 
         val testDetailColumns = testDetailColumnStr.toUpperCase.split(",")
-        println(finalResultsDF.count())
+        println("final_count: " + finalResultsDF.count())
+
         finalResultsDF
           .selectExpr(testDetailColumns: _*)
           .map(x => x.mkString("", dataSeperatorNonEscape, ""))

@@ -30,7 +30,7 @@ object XWJKernelEnginePluginByPrinterBackup {
         if (args.length == 1) {
           configLoader.setDefaultConfigPath(args(0))
         }
-        XWJKernelEnginePlugin.start()
+        XWJKernelEnginePluginByPrinterBackup.start()
       } catch {
         case ex: Exception => {
           ex.printStackTrace()
@@ -144,8 +144,8 @@ object XWJKernelEnginePluginByPrinterBackup {
       }
 
       //將xml分成三部分解析, 1.最外層的tag CIMProjectResults, 2.tag sequence 3.step測項
-      var rawdataDF = spark.read.text("s3a://rca-dev/IPPD-L10/Data/TEST_DETAIL_COMPRESSION_OUTPUT/FAILED/1561441702387" + "/*.xml")
-//      var rawdataDF = spark.read.text(testDetailDestPath.toString + "/*.xml")
+//      var rawdataDF = spark.read.text("s3a://rca-dev/IPPD-L10/Data/TEST_DETAIL_COMPRESSION_OUTPUT/FAILED/1561441702387" + "/*.xml")
+      var rawdataDF = spark.read.text(testDetailDestPath.toString + "/*.xml")
         .withColumn("filename", getLast(split(expr("input_file_name()"), "/")))
         .groupBy("filename").agg(concat_ws("", collect_list("value")).as("value"))
         .withColumn("TEST_STATUS", lower(regexp_extract(col("value"), "(RunResult=\")(\\w+)", 2)))
@@ -195,6 +195,7 @@ object XWJKernelEnginePluginByPrinterBackup {
         .selectExpr("split(value, '<Step ') as Step", "filename")
         .selectExpr("explode(Step) as Step", "filename")
         .filter(col("Step").contains("StepName=\""))
+        .filter(col("Step").contains("PayLoad"))
         .withColumn("MAIN_TEST_ITEM", regexp_extract(col("Step"), "(StepName=\")(.+)(\"\\sStepNumber=)", 2))
         .withColumn("TEST_RESULT", lower(regexp_extract(col("Step"), "(TestResult=\")(\\w+)", 2)))
         .withColumn("TEST_RESULT_INFO", regexp_extract(col("Step"), "(TestResultInfo=\")(.+)(\"\\sTestDateTimeStarted=)", 2))

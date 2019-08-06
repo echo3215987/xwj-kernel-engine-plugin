@@ -42,7 +42,8 @@ object SparkUDF {
     //取得測試樓層與線體對應表
     def getFloorLine = udf {
         s: String =>
-            configLoader.getString("test_floor_line", "code_"+s)
+//            configLoader.getString("test_floor_line", "code_"+s)
+        "D622"
     }
     //取得測試Spec的key
     def splitKey = udf {

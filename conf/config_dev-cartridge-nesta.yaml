@@ -3,7 +3,7 @@ spark:
     master: "k8s://192.168.1.63:6443"
     conf: "spark.driver.memory=6g;
        spark.executor.memory=6g;
-       spark.executor.instances=1;
+       spark.executor.instances=5;
        spark.memory.offHeap.enabled=true;
        spark.memory.offHeap.size=4g;
        spark.eventLog.dir=/mnt/fuse_cephfs/data/spark/eventLog;
