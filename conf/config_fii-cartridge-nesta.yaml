@@ -1,27 +1,26 @@
 spark:
-    job_name: "dev-local-xwj-KernelEngine-plugin"
-    master: "k8s://192.168.1.63:6443"
-    conf: "spark.driver.memory=6g;
-           spark.executor.memory=6g;
-           spark.executor.instances=1;
-           spark.memory.offHeap.enabled=true;
-           spark.memory.offHeap.size=4g;
-           spark.eventLog.dir=/mnt/fuse_cephfs/data/spark/eventLog;
-           spark.eventLog.enabled=true"
+    job_name: "fii-xwj-KernelEngine-plugin"
+    master: "k8s://10.134.226.248:8443"
+    conf: "spark.driver.memory=3g;
+       spark.executor.memory=3g;
+       spark.executor.instances=3;
+       spark.memory.offHeap.enabled=true;
+       spark.memory.offHeap.size=4g"
 
 minio:
-    endpoint:   "http://10.57.232.167:31359"
+    endpoint:   "http://10.134.224.192:31359"
     accessKey:  "AKIAIOSFODNN7EXAMPLE"
     secretKey:  "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
     bucket:     "rca-ftp"
 
 cockroachdb:
     adapter:    "postgresql"
-    host1:       "10.57.232.61"
-    host2:       "10.57.232.62"
-    host3:       "10.57.232.63"
+    host1:      "10.134.224.192"
+    host2:      "10.134.224.193"
+    host3:      "10.134.224.194"
     port:       "26257"
     sslmode:    "require"
+    database:   "rca-cartridge-nesta"
     username:   "bigdata"
     password:   "bigdata"
     #conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
@@ -31,12 +30,16 @@ mariadb:
     adapter:    "mysql"
     loadbalance: "loadbalance"
     host:       "10.57.232.61"
-    port:       "3308"
-    database:   "rca-dev"
+    host1:       "10.134.224.192"
+    host2:       "10.134.224.193"
+    host3:       "10.134.224.194"
+    port:       "3306"
+    database:   "rca-cartridge-nesta"
     username:   "edgeserver"
     password:   "Foxconn123654!@"
     #conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
-    conn_str:    "jdbc:{{adapter}}:{{loadbalance}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
+    #conn_str:    "jdbc:{{adapter}}:{{loadbalance}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
+    conn_str:    "jdbc:{{adapter}}:{{loadbalance}}://{{host1}}:{{port}},{{host2}}:{{port}},{{host3}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
 
 general:
     factory: "CQ"
@@ -92,8 +95,7 @@ local_log_path:
     bobcat_d_xwj_file_limits: "1"
 
 minio_log_path:
-    #data_base_path: "s3a://rca-ftp/IPPD-L10/Data"
-    data_base_path: "s3a://rca-dev/IPPD-L10/Data"
+    data_base_path: "s3a://rca-ftp/Cartridge-Nesta/Data"
     wip_path: "{{data_base_path}}/SFC/R_WIP_SFC/"
     wip_parts_path: "{{data_base_path}}/SFC/R_WIP_PARTS_SFC/"
     bobcat_path: "{{data_base_path}}/Bobcat_D/"
@@ -113,6 +115,10 @@ minio_log_path:
 
     test_detail_path: "{{data_base_path}}/TEST_DETAIL/"
     test_detail_file_limits: "1"
+
+    bobcat_d_xwj_path: "{{data_base_path}}/Bobcat_D_XWJ/"
+    bobcat_d_xwj_tmp_path: "{{data_base_path}}/Bobcat_D_XWJ_TMP/"
+    bobcat_d_xwj_file_limits: "1"
 
 summary_log_path:
     data_base_path: "s3a://test"
@@ -135,6 +141,11 @@ log_prop:
     bobcat_col: "sn,station,stationcode,machine,start_time,end_time,istestfail,symptom,desc_,uploadtime,c1,c2,c3"
     bobcat_table: "test"
     bobcat_dt_fmt: "yyyy-MM-dd HH:mm:ss"
+
+
+    #bobcat_xwj_col: "product,sn,station_name,station_id,machine_id,test_starttime,test_endtime,test_item_result_temp,test_item,test_item_result_detail_temp,c1,c2,c3,test_value_temp"
+    bobcat_xwj_col: "sn,station_name,station_id,machine_id,test_starttime,test_endtime,test_item_result_temp,test_item,test_item_result_detail_temp,c1,c2,c3,test_value_temp"
+    bobcat_xwj_dt_fmt: "yyyy-MM-dd HH:mm:ss"
 
     #CN95I870ZC06MD_||_SOR_||_SOR_||_CN95I870ZC06MD_||_L7_TLEOL_06_||_Exception_||_2019/05/18 06:36_||_2019/05/18 06:36_||_PcaVerifyFirmwareRev_||_Error_||_MP_||__||_CQ_||_D62_||_2_||_ProcPCClockSync^DResultInfo^APcaVerifyFirmwareRev^DResultInfo^APcaVerifyFirmwareRev^DExpectedVersion^APcaVerifyFirmwareRev^DReadVersion^APcaVerifyFirmwareRev^DDateTimeStarted^APcaVerifyFirmwareRev^DActualFWUpdate^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C5/18/2019 5:29:48 AM^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^C^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_ProcPCClockSync^DResultInfo^C^APcaVerifyFirmwareRev^DResultInfo^C^APcaVerifyFirmwareRev^DExpectedVersion^C^APcaVerifyFirmwareRev^DReadVersion^CTJP1FN1845AR^APcaVerifyFirmwareRev^DDateTimeStarted^C^APcaVerifyFirmwareRev^DActualFWUpdate^C169^APcaVerifyFirmwareRev^DFWUpdateDSIDFirst^C_||_2019/05/18 06:36_||_2019/05/18 06:36_||_TLEOL_||_2019/05/18 06:36_||_TaiJi Base_||_42.3.8 REV_37_Taiji25
     test_detail_col: "sn,build_name,build_description,unit_number,station_id,test_status,test_starttime,test_endtime,list_of_failure,list_of_failure_detail,test_phase,machine_id,factory_code,floor,line_id,test_item,test_value,test_unit,test_lower,test_upper,test_item_result,test_item_result_detail,create_time,update_time,station_name,start_date,product,test_version"

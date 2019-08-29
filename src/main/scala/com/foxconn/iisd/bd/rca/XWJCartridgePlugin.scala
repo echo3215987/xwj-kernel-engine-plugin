@@ -1,21 +1,23 @@
 package com.foxconn.iisd.bd.rca
 
 import java.net.URI
+import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.util.{Date, Locale}
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{Column, Encoders, SparkSession}
+import org.apache.spark.sql._
 import org.apache.spark.sql.functions.{regexp_extract, when, _}
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType, IntegerType}
+import org.apache.spark.sql.types._
 
 import scala.collection.mutable.WrappedArray
 import scala.collection.mutable.Seq
 import com.foxconn.iisd.bd.rca.SparkUDF._
-import org.apache.spark.sql.SaveMode
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.storage.StorageLevel
+//import com.foxconn.iisd.bd.rca.XWJKernelEnginePluginByPrinterBackup.configLoader
+//import org.apache.hadoop.fs.{FileSystem, Path}
 
-object XWJKernelEnginePlugin {
+object XWJCartridgePlugin {
 
   var configLoader = new ConfigLoader()
   val datetimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -31,7 +33,7 @@ object XWJKernelEnginePlugin {
     val limit = 1
     var count = 0
 
-    println("xwj-plugin-v1")
+    println("xwj-plugin-cartridge-nesta-v2")
 
     while (count < limit) {
       println(s"count: $count")
@@ -41,7 +43,7 @@ object XWJKernelEnginePlugin {
         if (args.length == 1) {
           configLoader.setDefaultConfigPath(args(0))
         }
-        XWJKernelEnginePlugin.start()
+        XWJCartridgePlugin.start()
       } catch {
         case ex: Exception => {
           ex.printStackTrace()
@@ -106,18 +108,13 @@ object XWJKernelEnginePlugin {
       spark.sparkContext.hadoopConfiguration.set("fs.s3a.secret.key", secretKey)
     }
 
-    spark.sparkContext.hadoopConfiguration.set("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false")
+//    spark.sparkContext.hadoopConfiguration.set("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false")
 
     import spark.implicits._
     val numExecutors = spark.conf.get("spark.executor.instances", "1").toInt
     val testDetailDTFmt = configLoader.getString("log_prop", "test_detail_dt_fmt")
 
     val factory = configLoader.getString("general", "factory")
-
-    //val failCondition: Int = configLoader.getString("analysis", "fail_condition").toInt
-
-    //s3a://" + bucket + "/
-
 
     //Bobcat_d_xwj
     val bobcatXWJColumnStr = configLoader.getString("log_prop", "bobcat_xwj_col")
@@ -146,11 +143,14 @@ object XWJKernelEnginePlugin {
         bobcatXWJPath, //source
         bobcatXWJFileLmits
       )
-
 //        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190729/F6U16-30001_bob_0_TEST_R_20190729114205589.txt")
 //        val bobcatDestPaths = new Path("s3a://rca-dev/Cartridge-Nesta/Data/Bobcat_D_XWJ/20190725/F6U16-30001_bob_0_TEST_R_20190725035700509.txt")
         var bobcatSourceDf = IoUtils.getDfFromPath(spark, bobcatDestPaths.toString, bobcatXWJColumnStr, dataSeperator)
+              .persist(StorageLevel.MEMORY_AND_DISK)
         println("source_count: " + bobcatSourceDf.count())
+
+//        bobcatSourceDf.show(1, false)
+
         val specs = List(downLimit, upLimit, lowerLimit, upperLimit)
         val lowerSpecs = List(downLimit, lowerLimit)
         val upperSpecs = List(upLimit, upperLimit)
@@ -168,8 +168,7 @@ object XWJKernelEnginePlugin {
           .withColumn("test_item_result_detail_temp", replaceTestResultDetail(col("test_item_result_detail_temp")))
           .withColumn("test_item_result_detail", col("test_item_result_detail_temp"))
           .withColumn("test_item_result_detail", concat_ws(ctrlCCode, col("test_item"), col("test_item_result_detail")))
-
-//        bobcatSourceDf.show(false)
+          .persist(StorageLevel.MEMORY_AND_DISK)
 
         val specCols = List("product", "sn", "station_name", "test_starttime", "test_version", "test_item", "test_value_temp")
         val specDf = bobcatSourceDf.filter(row => specs.exists(row.getAs("test_item").toString.contains))
@@ -212,7 +211,7 @@ object XWJKernelEnginePlugin {
               concat_ws(ctrlACode, collect_list("test_item_result")).as("test_item_result"),
               concat_ws(ctrlACode, collect_list("test_item_result_detail")).as("test_item_result_detail"),
               max(col("test_item_result_temp")).as("test_status")
-            )
+            ).persist(StorageLevel.MEMORY_AND_DISK)
 
         //failure list, use ^A(SOH) separation
         val failDf = bobcatSourceDf.filter(col("test_item_result_temp").equalTo(1))
@@ -253,9 +252,9 @@ object XWJKernelEnginePlugin {
           when(col("list_of_failure").isNull, lit("")).otherwise(col("list_of_failure")))
           .withColumn("list_of_failure_detail",
             when(col("list_of_failure_detail").isNull, lit("")).otherwise(col("list_of_failure_detail")))
-
-        finalResultsDF.show(false)
-        finalResultsDF.where(col("test_status").equalTo("fail")).show(false)
+          .persist(StorageLevel.MEMORY_AND_DISK)
+//        finalResultsDF.show(false)
+//        finalResultsDF.where(col("test_status").equalTo("fail")).show(false)
 
         val testDetailColumns = testDetailColumnStr.toUpperCase.split(",")
         println("final_count: " + finalResultsDF.count())
@@ -267,14 +266,10 @@ object XWJKernelEnginePlugin {
           .write
           .text(testDetailPath + flag)
 
-      //成功
-//      IoUtils.moveFileToTestDetail(spark, flag, testDetailCompressionTmpPath, testDetailCompressionSuccessfulPath, testDetailPath)
-
-    } catch {
+      } catch {
       case ex: Exception => {
         println("===> " + ex.printStackTrace())
-        //失敗
-//        IoUtils.moveFileToFailed(spark, flag, testDetailCompressionTmpPath, testDetailCompressionFailedPath, testDetailPath)
+
       }
     }
 

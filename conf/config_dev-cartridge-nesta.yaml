@@ -17,22 +17,27 @@ minio:
 
 cockroachdb:
     adapter:    "postgresql"
-    host:       "10.57.232.61"
+    host1:       "10.57.232.61"
+    host2:       "10.57.232.62"
+    host3:       "10.57.232.63"
     port:       "26257"
     sslmode:    "require"
     database:   "rca-dev"
     username:   "bigdata"
     password:   "bigdata"
-    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
+    #conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}"
+    conn_str:   "jdbc:{{adapter}}://{{host1}}:{{port}},{{host2}}:{{port}},{{host3}}:{{port}}/{{database}}"
 
 mariadb:
     adapter:    "mysql"
+    loadbalance: "loadbalance"
     host:       "10.57.232.61"
     port:       "3308"
     database:   "rca-dev"
     username:   "edgeserver"
     password:   "Foxconn123654!@"
-    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
+    #    conn_str:   "jdbc:{{adapter}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
+    conn_str:    "jdbc:{{adapter}}:{{loadbalance}}://{{host}}:{{port}}/{{database}}?useSSL=false&serverTimezone=Asia/Taipei&useUnicode=true&characterEncoding=UTF-8"
 
 general:
     factory: "CQ"

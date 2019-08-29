@@ -6,7 +6,7 @@ scalaVersion := "2.12.8"
 
 mainClass in assembly := Some("com.foxconn.iisd.bd.rca.XWJKernelEnginePlugin")
 
-assemblyJarName in assembly := { s"${name.value}.jar" }
+assemblyJarName in assembly := { s"${name.value}-${version.value}.jar" }
 
 val sparkVersion = "2.4.0"
 //val hadoopVersion = "2.7.2"
