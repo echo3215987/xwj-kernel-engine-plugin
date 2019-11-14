@@ -3,7 +3,7 @@ package com.foxconn.iisd.bd.rca
 import java.io._
 import java.net.URI
 
-import com.foxconn.iisd.bd.rca.XWJCartridgePlugin.{configLoader, ctrlACode, ctrlCCode}
+import com.foxconn.iisd.bd.rca.XWJCartridgePlugin.{configLoader}
 import org.apache.spark.sql.functions.{col, udf, when}
 
 import scala.collection.mutable.{Seq, WrappedArray}
@@ -30,7 +30,8 @@ object SparkUDF {
 
     def genTestItemSpec = udf {
         (test_item: String) =>{
-            test_item.split(ctrlACode).map(item => item.concat(ctrlCCode)).mkString(ctrlACode)
+            test_item.split(XWJKEPluginConstants.ctrlACode)
+              .map(item => item.concat(XWJKEPluginConstants.ctrlCCode)).mkString(XWJKEPluginConstants.ctrlACode)
         }
     }
     //Catridge----end
